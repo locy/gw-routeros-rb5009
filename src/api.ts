@@ -1,7 +1,6 @@
 import { serveDir } from "@std/http/file-server";
-import { RouterOSAPI } from "routeros";
 import type { DatabaseWrapper, TrafficSample } from "./db.ts";
-import type { RouterOSClient, DhcpLease, TopEndpoint } from "./routeros.ts";
+import type { RouterOSClient } from "./routeros.ts";
 import type { Settings } from "./config.ts";
 
 function json(data: unknown, status = 200): Response {
@@ -17,75 +16,46 @@ export function createHandler(
   lanInterface: string,
   publicDir: string,
   settings: Settings | null = null,
+  rosClient: RouterOSClient | null = null,
 ): (request: Request) => Promise<Response> {
   return async (request: Request) => {
     const url = new URL(request.url);
     if (url.pathname === "/api/status") {
-      // Build IP-to-MAC mapping from DHCP leases (use separate ROS client to avoid channel conflicts)
+      // Build IP-to-MAC mapping from DHCP leases + get active connections via shared client
       const ipToMacMap = new Map<string, { mac?: string; hostname?: string }>();
-      if (settings && !settings.mockMode) {
+      const topByIp = new Map<string, { bytes: number; packets: number; mac?: string; hostname?: string }>();
+      if (rosClient) {
         try {
-          const ros = new RouterOSAPI({
-            host: settings.routerosHost,
-            port: settings.routerosPort,
-            user: settings.routerosUser,
-            password: settings.routerosPassword,
-            
-          });
-          await ros.connect();
-          const rows = await ros.write("/ip/dhcp-server/lease/print", ["?dynamic=true"], [".proplist", "active-address,active-mac-address,host-name,active-server,expires-after"]);
-          for (const r of rows as import("./routeros.ts").RouterOSRow[]) {
-            ipToMacMap.set(String(r["active-address"] ?? ""), {
-              mac: String(r["active-mac-address"] ?? "") || undefined,
-              hostname: String(r["host-name"] ?? "") || undefined,
+          const leases = await rosClient.readDhcpLeases();
+          for (const l of leases) {
+            ipToMacMap.set(l.activeAddress, {
+              mac: l.activeMac,
+              hostname: l.hostName,
             });
           }
-          ros.close();
-        } catch {
-          // ignore DHCP errors
-        }
-      }
 
-      // Get active connections and aggregate by top source IP
-      const topByIp = new Map<string, { bytes: number; packets: number; mac?: string; hostname?: string }>();
-      if (settings && !settings.mockMode) {
-        try {
-          const ros2 = new RouterOSAPI({
-            host: settings.routerosHost,
-            port: settings.routerosPort,
-            user: settings.routerosUser,
-            password: settings.routerosPassword,
-            
-          });
-          await ros2.connect();
-          const rows = await ros2.write("/ip/firewall/connection/print", [".proplist", "src-address,dst-address,orig-bytes,repl-bytes,orig-packets,repl-packets,src-port,dst-port,protocol"]);
-          for (const r of rows as import("./routeros.ts").RouterOSRow[]) {
-            const srcAddr = String(r["src-address"] ?? "");
-            const dstAddr = String(r["dst-address"] ?? "");
-            if (!srcAddr || !dstAddr) continue;
-            const isLocalSrc = /^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\./.test(srcAddr);
-            const isExternalDst = !/^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\./.test(dstAddr);
+          const conns = await rosClient.readActiveConnections();
+          for (const c of conns) {
+            const isLocalSrc = /^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\./.test(c.srcIp);
+            const isExternalDst = !/^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\./.test(c.dstIp ?? "");
             if (isLocalSrc && isExternalDst) {
-              const entry = topByIp.get(srcAddr);
-              const bytes = (Number(r["orig-bytes"]) || 0) + (Number(r["repl-bytes"]) || 0);
-              const packets = (Number(r["orig-packets"]) || 0) + (Number(r["repl-packets"]) || 0);
+              const entry = topByIp.get(c.srcIp);
               if (entry) {
-                entry.bytes += bytes;
-                entry.packets += packets;
+                entry.bytes += c.bytes;
+                entry.packets += c.packets;
               } else {
-                const ipInfo = ipToMacMap.get(srcAddr);
-                topByIp.set(srcAddr, {
-                  bytes,
-                  packets,
+                const ipInfo = ipToMacMap.get(c.srcIp);
+                topByIp.set(c.srcIp, {
+                  bytes: c.bytes,
+                  packets: c.packets,
                   mac: ipInfo?.mac,
                   hostname: ipInfo?.hostname,
                 });
               }
             }
           }
-          ros2.close();
         } catch {
-          // ignore connection errors
+          // ignore ROS errors
         }
       }
 

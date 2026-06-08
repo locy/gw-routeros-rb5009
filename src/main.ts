@@ -16,10 +16,11 @@ async function createRouterOSClient(settings: Awaited<ReturnType<typeof loadSett
     port: settings.routerosPort,
     user: settings.routerosUser,
     password: settings.routerosPassword,
-    
+    timeout: 5,
+    keepalive: true,
   });
   await rosClient.connect();
-  console.log("[RouterOS] Connected to", settings.routerosHost);
+  console.log("[RouterOS] Connected to", settings.routerosHost, "(keepalive enabled)");
   return {
     async readInterfaceCounters() {
       const rows = await rosClient.write("/interface/print", [[".proplist", "name,running,rx-byte,tx-byte,rx-error,tx-error"]]);
@@ -70,7 +71,7 @@ if (command === "routeros-script") {
   const db = new DatabaseWrapper(settings.databasePath);
   db.migrate();
 
-  // Create ROS client if not in mock mode
+  // Create ONE shared ROS client (with keepalive) for both collector and API
   let rosClient: RouterOSClient | null = null;
   if (!settings.mockMode) {
     rosClient = await createRouterOSClient(settings);
@@ -83,6 +84,7 @@ if (command === "routeros-script") {
       settings.lanInterface,
       "public",
       settings,
+      rosClient,
     );
     const server = createServer(async (req, res) => {
       const url = `http://${req.headers.host}${req.url!}`;
@@ -116,10 +118,10 @@ if (command === "routeros-script") {
       console.log(`Listening on ${settings.bindHost}:${settings.bindPort}`);
     });
 
-    // Start background collector loop
+    // Start background collector loop (reuse shared rosClient)
     const client: RouterOSClient = settings.mockMode
       ? new MockRouterOSClient(settings.wanInterface, settings.lanInterface)
-      : await createRouterOSClient(settings);
+      : rosClient!;
     const collector = new Collector(client, db, [settings.wanInterface, settings.lanInterface]);
     console.log("Collector started (polling every", settings.pollIntervalSeconds, "s)");
     const poll = async () => {
