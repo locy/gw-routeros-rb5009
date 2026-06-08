@@ -395,20 +395,16 @@ function drawLineChart(canvasId, series, data) {
 
   if (!canvas.__clickOverlay) {
     var overlayDiv = document.createElement("div");
-    overlayDiv.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;cursor:pointer;z-index:10";
+    overlayDiv.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;cursor:pointer;z-index:2;background:transparent";
     canvas.parentElement.style.position = "relative";
     canvas.parentElement.insertBefore(overlayDiv, canvas.nextSibling);
     canvas.__clickOverlay = overlayDiv;
-
-    overlayDiv.onclick = function(e) {
-      var r = canvas.getBoundingClientRect();
-      drawClickOverlay(canvas, e.clientX - r.left);
-    };
-  } else {
-    // Redraw: clear any existing tooltip overlay
-    var ov = canvas.__clickOverlay;
-    while (ov.firstChild) ov.removeChild(ov.firstChild);
   }
+  // Always set click handler
+  canvas.__clickOverlay.onclick = function(e) {
+    var r = canvas.getBoundingClientRect();
+    drawClickOverlay(canvas, e.clientX - r.left);
+  };
 }
 
 function redrawCanvas(canvas) {

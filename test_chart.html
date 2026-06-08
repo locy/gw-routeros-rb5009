@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html><body>
+<div id="test" style="width:400px;height:240px"></div>
+<script>
+// Simulate drawLineChart
+var canvas = document.createElement('canvas');
+document.getElementById('test').appendChild(canvas);
+canvas.width = 400; canvas.height = 240;
+var ctx = canvas.getContext('2d');
+ctx.fillStyle = 'red';
+ctx.fillRect(0, 0, 400, 240);
+console.log('Canvas drawn OK');
+
+// Test overlay
+var overlay = document.createElement('div');
+overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;cursor:pointer;z-index:2;background:transparent';
+document.getElementById('test').style.position = 'relative';
+document.getElementById('test').insertBefore(overlay, canvas.nextSibling);
+overlay.onclick = function() { console.log('click'); };
+console.log('Overlay OK');
+</script>
+</body></html>
