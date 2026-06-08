@@ -399,9 +399,9 @@ function drawLineChart(canvasId, series, data) {
   canvas.__clickHeight = height;
 
   if (!canvas.__clickOverlay) {
-    var overlayDiv = document.createElement("div");
-    overlayDiv.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;z-index:1;background:transparent";
     canvas.parentElement.style.position = "relative";
+    var overlayDiv = document.createElement("div");
+    overlayDiv.style.cssText = "position:absolute;top:100%;left:0;width:100%;height:0;cursor:crosshair;z-index:1;background:transparent";
     canvas.parentElement.insertBefore(overlayDiv, canvas.nextSibling);
     canvas.__clickOverlay = overlayDiv;
   }
@@ -539,19 +539,19 @@ function showClickValues(canvas, mouseX) {
   var tooltipY = pad.top + 10;
 
   ctx.fillStyle = "rgba(11,15,25,0.95)";
-  ctx.fillRect(tooltipX, tooltipY, tooltipMaxW, 20 * (series.length + 1));
+  ctx.fillRect(tooltipX, tooltipY, tooltipMaxW, 22 * (series.length + 1));
   ctx.strokeStyle = "#2d3748"; ctx.lineWidth = 1;
-  ctx.strokeRect(tooltipX, tooltipY, tooltipMaxW, 20 * (series.length + 1));
-  ctx.font = "11px Inter, monospace"; ctx.textAlign = "left"; ctx.textBaseline = "top";
+  ctx.strokeRect(tooltipX, tooltipY, tooltipMaxW, 22 * (series.length + 1));
+  ctx.font = "14px Inter, monospace"; ctx.textAlign = "left"; ctx.textBaseline = "top";
 
   for (var si3 = 0; si3 < series.length; si3++) {
     var v2 = Number(data[idx][series[si3].key]) || 0;
     ctx.fillStyle = series[si3].color;
-    ctx.fillText(series[si3].label + ": " + formatBps(Math.abs(v2)), tooltipX + 6, tooltipY + 4 + si3 * 20);
+    ctx.fillText(series[si3].label + ": " + formatBps(Math.abs(v2)), tooltipX + 6, tooltipY + 4 + si3 * 22);
   }
   var t = data[idx].timestamp;
   ctx.fillStyle = "#718096";
-  ctx.fillText(t ? t.toTimeString().slice(0, 8) : "", tooltipX + 6, tooltipY + (series.length + 1) * 20 - 16);
+  ctx.fillText(t ? t.toTimeString().slice(0, 8) : "", tooltipX + 6, tooltipY + (series.length + 1) * 22 - 18);
 
   // Store for redraw detection
   canvas.__clickOverlay._shownIdx = idx;
