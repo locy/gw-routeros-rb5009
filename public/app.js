@@ -16,11 +16,11 @@ function setConnectionStatus(color, text) {
 
 // ---- Color helpers ----
 
-function mbps(value) {
+function formatBps(value) {
   var abs = Math.abs(value);
-  if (abs < 1000) return abs.toFixed(0) + " bps";
-  if (abs < 1000000) return (abs / 1000).toFixed(0) + " Kbps";
-  return (abs / 1000000).toFixed(2) + " Mbps";
+  if (abs < 1000) return abs.toFixed(0) + " b";
+  if (abs < 1000000) return (abs / 1000).toFixed(1) + " kb";
+  return (abs / 1000000).toFixed(2) + " Mb";
 }
 
 function colorForBps(bps) {
@@ -87,9 +87,9 @@ function updateLiveDisplay() {
   if (wanArr && wanArr.length > 0) {
     var w = wanArr[wanArr.length - 1];
     if (wanEl) {
-      wanEl.innerHTML = '<span style="color:' + colorForBps(w.rxBps) + '">' + mbps(w.rxBps) + ' ↓</span>' +
+      wanEl.innerHTML = '<span style="color:' + colorForBps(w.rxBps) + '">' + formatBps(w.rxBps) + ' ↓</span>' +
         ' / ' +
-        '<span style="color:' + colorForBps(w.txBps) + '">' + mbps(w.txBps) + ' ↑</span>';
+        '<span style="color:' + colorForBps(w.txBps) + '">' + formatBps(w.txBps) + ' ↑</span>';
     }
   }
 
@@ -97,9 +97,9 @@ function updateLiveDisplay() {
   if (lanArr && lanArr.length > 0) {
     var l = lanArr[lanArr.length - 1];
     if (lanEl) {
-      lanEl.innerHTML = '<span style="color:' + colorForBps(l.rxBps) + '">' + mbps(l.rxBps) + ' ↓</span>' +
+      lanEl.innerHTML = '<span style="color:' + colorForBps(l.rxBps) + '">' + formatBps(l.rxBps) + ' ↓</span>' +
         ' / ' +
-        '<span style="color:' + colorForBps(l.txBps) + '">' + mbps(l.txBps) + ' ↑</span>';
+        '<span style="color:' + colorForBps(l.txBps) + '">' + formatBps(l.txBps) + ' ↑</span>';
     }
   }
 }
@@ -199,7 +199,7 @@ function drawLineChart(canvasId, series, data) {
     ctx.font = "11px Inter, monospace";
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
-    ctx.fillText(mbps(val), pad.left - 8, gy);
+    ctx.fillText(formatBps(val), pad.left - 8, gy);
   }
   ctx.setLineDash([]);
 
