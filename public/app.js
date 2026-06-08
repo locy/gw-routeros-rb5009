@@ -160,27 +160,31 @@ function drawLineChart(canvasId, series, data) {
     return;
   }
 
-  // Compute max value across all series in dataset
-  var maxVal = 1;
+  // Compute min/max value across all series in dataset (auto-scale)
+  var minVal = Infinity;
+  var maxVal = -Infinity;
   for (var s = 0; s < series.length; s++) {
     for (var i = 0; i < data.length; i++) {
       var v = Math.abs(Number(data[i][series[s].key]));
+      if (v < minVal) minVal = v;
       if (v > maxVal) maxVal = v;
     }
   }
-  // Round up to nice scale: find smallest power-of-10 multiple >= maxVal
-  var scale = Math.pow(10, Math.floor(Math.log10(maxVal)));
-  if (scale < maxVal) scale *= 10;
-  // e.g. maxVal=200000 → floor(log10)=5 → 10^5=100000 < 200000 → 200000
-  // e.g. maxVal=287942 → floor(log10)=5 → 10^5=100000 < 287942 → 200000
-  // But we want round numbers, not 200000. Use 500000 for 287942.
-  // Better: use powers of 10
-  scale = Math.pow(10, Math.ceil(Math.log10(maxVal)));
-  // e.g. 287942 → ceil(log10) = 6 → 10^6 = 1000000
-  // e.g. 199960 → ceil(log10) = 6 → 10^6 = 1000000
-  var globalMax = scale;
-  console.log("[chart] " + canvasId + " len=" + data.length, "globalMax=" + globalMax, "chartW=" + chartW + " chartH=" + chartH);
-  console.log("[chart] " + canvasId + " data[0][rxBps]=" + data[0].rxBps, "data[-1][rxBps]=" + data[data.length-1].rxBps);
+  // Ensure minVal is at least 0, add padding
+  minVal = Math.max(0, minVal);
+  var range = maxVal - minVal;
+  if (range < 100) range = 100; // minimum 100 bps range for visibility
+  var padding = range * 0.1; // 10% padding
+  var yMin = minVal - padding;
+  var yMax = maxVal + padding;
+  if (yMin < 0) yMin = 0;
+  var chartRange = yMax - yMin || 1;
+
+  // Round yMax to nice scale for display
+  var scaleExp = Math.pow(10, Math.floor(Math.log10(yMax)));
+  var displayMax = Math.ceil(yMax / scaleExp) * scaleExp;
+  var displayMin = Math.max(0, Math.floor(minVal / scaleExp) * scaleExp);
+  var displayRange = displayMax - displayMin || 1;
 
   // ---- Grid lines ----
   ctx.strokeStyle = "#1e293b";
@@ -193,8 +197,8 @@ function drawLineChart(canvasId, series, data) {
     ctx.lineTo(width - pad.right, gy);
     ctx.stroke();
 
-    // Y-axis labels
-    var val = globalMax - (globalMax / 4) * g;
+    // Y-axis labels (auto-scaled)
+    var val = displayMax - (displayRange / 4) * g;
     ctx.fillStyle = "#64748b";
     ctx.font = "11px Inter, monospace";
     ctx.textAlign = "right";
@@ -225,8 +229,11 @@ function drawLineChart(canvasId, series, data) {
 
     for (var li = 0; li < data.length; li++) {
       var v = Number(data[li][s.key]) || 0;
+      var av = Math.abs(v);
       var x = pad.left + (li / (data.length - 1)) * chartW;
-      var y = pad.top + chartH - (Math.abs(v) / globalMax) * chartH;
+      var y = pad.top + chartH - ((av - yMin) / chartRange) * chartH;
+      if (y < pad.top) y = pad.top;
+      if (y > pad.top + chartH) y = pad.top + chartH;
 
       if (li === 0) {
         ctx.moveTo(x, y);
@@ -240,7 +247,7 @@ function drawLineChart(canvasId, series, data) {
     if (data.length > 0) {
       var lastVal = Number(data[data.length - 1][s.key]) || 0;
       var dotX = pad.left + chartW;
-      var dotY = pad.top + chartH - (Math.abs(lastVal) / globalMax) * chartH;
+      var dotY = pad.top + chartH - (Math.abs(lastVal) - yMin) / chartRange * chartH;
       ctx.fillStyle = s.color;
       ctx.beginPath();
       ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
