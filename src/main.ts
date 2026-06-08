@@ -40,10 +40,17 @@ if (command === "routeros-script") {
         });
       }
     });
-    wss.on("connection", (ws) => {
+    wss.on("connection", (ws, req) => {
+      console.log(`[WS] client connected from ${req.socket?.remoteAddress || "unknown"}`);
       wsHub.add(ws);
-      ws.on("close", () => wsHub.remove(ws));
-      ws.on("error", () => wsHub.remove(ws));
+      ws.on("close", () => {
+        console.log(`[WS] client disconnected`);
+        wsHub.remove(ws);
+      });
+      ws.on("error", (e) => {
+        console.log(`[WS] client error`);
+        wsHub.remove(ws);
+      });
     });
     server.listen(Number(settings.bindPort), settings.bindHost, () => {
       console.log(`Listening on ${settings.bindHost}:${settings.bindPort}`);
