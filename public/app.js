@@ -91,31 +91,18 @@ function waitForInit() {
     window.connectWS();
     startPeriodicFetches();
     window.initHistoryChart();
-    // Re-apply tab click handlers AFTER initHistoryChart to include the wrapper
-    (function() {
-      var liveEl = document.getElementById("tab-live");
-      var histEl = document.getElementById("tab-history");
-      if (liveEl) {
-        liveEl.addEventListener("click", function() { switchTab("live"); });
-      }
-      if (histEl) {
-        histEl.addEventListener("click", function() {
-          window._switchTab("history");
-        });
-      }
-    })();
+    // Re-apply tab click handlers after init
+    var liveEl = document.getElementById("tab-live");
+    var histEl = document.getElementById("tab-history");
+    if (liveEl) {
+      liveEl.addEventListener("click", function() { switchTab("live"); });
+    }
+    if (histEl) {
+      histEl.addEventListener("click", function() {
+        window._switchTab("history");
+      });
+    }
   } else {
     setTimeout(waitForInit, 50);
   }
 }
-  var liveEl = document.getElementById("tab-live");
-  var histEl = document.getElementById("tab-history");
-  if (liveEl) {
-    liveEl.addEventListener("click", function() { switchTab("live"); });
-  }
-  if (histEl) {
-    histEl.addEventListener("click", function() {
-      window._switchTab("history");
-    });
-  }
-})();
