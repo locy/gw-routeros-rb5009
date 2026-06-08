@@ -164,3 +164,23 @@ canvas {
   font-size: 14px;
   color: #a0aec0;
 }
+
+.device-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.device-table thead th {
+  text-align: left;
+  color: #718096;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-bottom: 1px solid #2d3748;
+}
+
+.device-table tbody td {
+  padding: 6px 8px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+}

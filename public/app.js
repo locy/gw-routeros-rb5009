@@ -3,6 +3,76 @@
 var samples = new Map();
 var MAX_CHART_POINTS = 120;
 
+// ---- Format bytes helper ----
+
+function formatBytes(n) {
+  if (n < 1024) return n.toString();
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+  if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + " MB";
+  return (n / 1024 / 1024 / 1024).toFixed(2) + " GB";
+}
+
+// ---- Fetch top devices ----
+
+async function fetchTopDevices() {
+  try {
+    const resp = await fetch("/api/status");
+    const data = await resp.json();
+    const table = document.getElementById("top-devices");
+    if (!table) return;
+    if (!data.topDevices || !data.topDevices.available || data.topDevices.items.length === 0) {
+      table.innerHTML = '<tr><td style="color:#718096">尚未取得 Top IP 資料</td></tr>';
+      return;
+    }
+    let html = '<thead><tr><th>IP</th><th>MAC</th><th>Host</th><th>Bytes</th><th>Packets</th></tr></thead><tbody>';
+    for (const d of data.topDevices.items) {
+      html += '<tr><td style="color:#e2e8f0">' + d.ip + '</td>';
+      html += '<td style="color:#a0aec0">' + d.mac + '</td>';
+      html += '<td style="color:#a0aec0">' + (d.hostname || "-") + '</td>';
+      html += '<td style="color:#60a5fa">' + formatBytes(d.bytes) + '</td>';
+      html += '<td style="color:#60a5fa">' + d.packets.toLocaleString() + '</td></tr>';
+    }
+    html += '</tbody>';
+    table.innerHTML = html;
+  } catch (e) {
+    // ignore
+  }
+}
+
+// ---- Fetch events ----
+
+async function fetchEvents() {
+  try {
+    const resp = await fetch("/api/events");
+    const data = await resp.json();
+    const ul = document.getElementById("events");
+    if (!ul) return;
+    if (!data || data.length === 0) {
+      ul.innerHTML = '<li style="color:#718096">無事件</li>';
+      return;
+    }
+    let html = "";
+    for (const e of data) {
+      const ts = e.timestamp ? e.timestamp.slice(11, 16) : "??:??";
+      html += '<li>' + ts + ' <span style="color:#a0aec0">[' + e.type + ']</span>' +
+        (e.interface ? ' <span style="color:#60a5fa">' + e.interface + '</span>' : '') +
+        ' ' + (e.message || '') + '</li>';
+    }
+    ul.innerHTML = html;
+  } catch (e) {
+    // ignore
+  }
+}
+
+// ---- Init periodic fetches ----
+
+function startPeriodicFetches() {
+  fetchTopDevices();
+  fetchEvents();
+  setInterval(fetchTopDevices, 15000); // top devices every 15s
+  setInterval(fetchEvents, 30000); // events every 30s
+}
+
 // ---- Connection status indicator ----
 
 function setConnectionStatus(color, text) {
@@ -293,3 +363,4 @@ function drawLineChart(canvasId, series, data) {
 // ---- Init ----
 
 connectWS();
+startPeriodicFetches();

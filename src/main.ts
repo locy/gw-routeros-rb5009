@@ -4,6 +4,7 @@ import { Collector } from "./collector.ts";
 import { loadSettings } from "./config.ts";
 import { DatabaseWrapper } from "./db.ts";
 import { MockRouterOSClient, RouterOSClient, parseInterfaceRows } from "./routeros.ts";
+import type { loadSettings } from "./config.ts";
 import { RouterOSAPI } from "routeros";
 import { runRetention } from "./retention.ts";
 import { generateReadonlyMonitorScript } from "./routeros_scripts.ts";
@@ -15,7 +16,7 @@ async function createRouterOSClient(settings: Awaited<ReturnType<typeof loadSett
     port: settings.routerosPort,
     user: settings.routerosUser,
     password: settings.routerosPassword,
-    useTLS: false,
+    
   });
   await rosClient.connect();
   console.log("[RouterOS] Connected to", settings.routerosHost);
@@ -23,6 +24,39 @@ async function createRouterOSClient(settings: Awaited<ReturnType<typeof loadSett
     async readInterfaceCounters() {
       const rows = await rosClient.write("/interface/print", [[".proplist", "name,running,rx-byte,tx-byte,rx-error,tx-error"]]);
       return parseInterfaceRows(rows as import("./routeros").RouterOSRow[], [settings.wanInterface, settings.lanInterface]);
+    },
+    async readActiveConnections() {
+      const rows = await rosClient.write("/ip/firewall/connection/print", [[".proplist", "src-address,dst-address,orig-bytes,repl-bytes,orig-packets,repl-packets,src-port,dst-port,protocol"]]);
+      const endpoints: import("./routeros").TopEndpoint[] = [];
+      for (const r of rows as import("./routeros").RouterOSRow[]) {
+        const srcAddr = String(r["src-address"] ?? "");
+        const dstAddr = String(r["dst-address"] ?? "");
+        if (!srcAddr || !dstAddr) continue;
+        endpoints.push({
+          srcIp: srcAddr,
+          dstIp: dstAddr,
+          srcPort: Number(r["src-port"]) || undefined,
+          dstPort: Number(r["dst-port"]) || undefined,
+          bytes: (Number(r["orig-bytes"]) || 0) + (Number(r["repl-bytes"]) || 0),
+          packets: (Number(r["orig-packets"]) || 0) + (Number(r["repl-packets"]) || 0),
+        });
+      }
+      return endpoints;
+    },
+    async readDhcpLeases() {
+      const rows = await rosClient.write("/ip/dhcp-server/lease/print", [["?dynamic=true"], [".proplist", "active-address,active-mac-address,host-name,active-server,expires-after"]]);
+      const leases: import("./routeros").DhcpLease[] = [];
+      for (const r of rows as import("./routeros").RouterOSRow[]) {
+        leases.push({
+          activeAddress: String(r["active-address"] ?? ""),
+          activeMac: String(r["active-mac-address"] ?? "") || undefined,
+          hostName: String(r["host-name"] ?? "") || undefined,
+          activeServer: String(r["active-server"] ?? "") || undefined,
+          expiresAfter: String(r["expires-after"] ?? "") || undefined,
+          dynamic: true,
+        });
+      }
+      return leases;
     },
   };
 }
@@ -36,12 +70,19 @@ if (command === "routeros-script") {
   const db = new DatabaseWrapper(settings.databasePath);
   db.migrate();
 
+  // Create ROS client if not in mock mode
+  let rosClient: RouterOSClient | null = null;
+  if (!settings.mockMode) {
+    rosClient = await createRouterOSClient(settings);
+  }
+
   if (command === "serve") {
     const handler = createHandler(
       db,
       settings.wanInterface,
       settings.lanInterface,
       "public",
+      settings,
     );
     const server = createServer(async (req, res) => {
       const url = `http://${req.headers.host}${req.url!}`;

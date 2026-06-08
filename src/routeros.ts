@@ -2,8 +2,29 @@ import type { InterfaceCounters } from "./models.ts";
 
 export type RouterOSRow = Record<string, unknown>;
 
+export interface TopEndpoint {
+  srcIp: string;
+  dstIp?: string;
+  srcPort?: number;
+  dstPort?: number;
+  bytes: number;
+  packets: number;
+}
+
+export interface DhcpLease {
+  activeAddress: string;
+  activeMac?: string;
+  hostName?: string;
+  activeServer?: string;
+  expiresAfter?: string;
+  dynamic: boolean;
+  blocked?: boolean;
+}
+
 export interface RouterOSClient {
   readInterfaceCounters(): Promise<Map<string, InterfaceCounters>>;
+  readActiveConnections(): Promise<TopEndpoint[]>;
+  readDhcpLeases(): Promise<DhcpLease[]>;
 }
 
 function routerosBoolean(value: unknown): boolean {
@@ -64,5 +85,22 @@ export class MockRouterOSClient implements RouterOSClient {
         txErrors: 0,
       }],
     ]);
+  }
+
+  async readActiveConnections(): Promise<TopEndpoint[]> {
+    return [
+      { srcIp: "192.168.7.100", dstIp: "8.8.8.8", bytes: 1234567, packets: 100 },
+      { srcIp: "192.168.7.200", dstIp: "1.1.1.1", bytes: 987654, packets: 50 },
+    ];
+  }
+
+  async readDhcpLeases(): Promise<DhcpLease[]> {
+    return [{
+      activeAddress: "192.168.7.100",
+      activeMac: "AA:BB:CC:DD:EE:FF",
+      hostName: "test-pc",
+      dynamic: true,
+      expiresAfter: "1h",
+    }];
   }
 }
