@@ -162,16 +162,23 @@ export function createHandler(
       }
       return json([]);
     }
-    if (url.pathname === "/api/debug/snapshot" && request.method === "POST") {
-      // Receive snapshot from browser for AI debugging
-      const snap = await request.json();
-      (globalThis as Record<string, unknown>).__debugState = snap;
-      let hist = (globalThis as Record<string, unknown>).__debugHistory as Record<string, unknown>[] | undefined;
-      if (!hist) { hist = []; (globalThis as Record<string, unknown>).__debugHistory = hist; }
-      hist.push(snap as Record<string, unknown>);
-      if (hist.length > 100) hist.shift();
-      (globalThis as Record<string, unknown>).__debugHistory = hist;
-      return json({ ok: true, total: hist.length });
+    if (url.pathname === "/api/debug/snapshot") {
+      if (request.method === "POST") {
+        const bodyText = await request.text();
+        if (!bodyText) return json({ ok: false, error: "empty body" });
+        const snap = JSON.parse(bodyText);
+        (globalThis as Record<string, unknown>).__debugState = snap;
+        let hist = (globalThis as Record<string, unknown>).__debugHistory as Record<string, unknown>[] | undefined;
+        if (!hist) { hist = []; (globalThis as Record<string, unknown>).__debugHistory = hist; }
+        hist.push(snap as Record<string, unknown>);
+        if (hist.length > 100) hist.shift();
+        (globalThis as Record<string, unknown>).__debugHistory = hist;
+        return json({ ok: true, total: hist.length });
+      }
+      // GET: return latest stored snapshot
+      const cached = (globalThis as Record<string, unknown>).__debugState;
+      if (cached && typeof cached === "object") return json(cached);
+      return json({ error: "no snapshot yet", timestamp: new Date().toISOString() });
     }
     if (url.pathname === "/api/debug/reset") {
       delete (globalThis as Record<string, unknown>).__debugState;
