@@ -583,11 +583,16 @@ document.getElementById("tab-history").addEventListener("click", function() { sw
 
 // ---- History chart ----
 
+// Zoom state for history chart: [startIdx, endIdx] in data array (0..1)
+var historyZoom = { start: 0, end: 1 };
+
 async function loadHistory() {
   var iface = document.getElementById("history-iface").value;
   var range = parseInt(document.getElementById("history-range").value);
   var canvas = document.getElementById("history-chart");
   if (!canvas) return;
+  // Reset zoom when loading new data
+  historyZoom = { start: 0, end: 1 };
 
   // Draw loading state
   var ctx = canvas.getContext("2d");
@@ -634,6 +639,58 @@ async function loadHistory() {
       { label: "下載", color: "#0ea5e9", key: "rxBps" },
       { label: "上傳", color: "#f59e0b", key: "txBps" },
     ], data);
+
+    // Wheel zoom on history chart
+    var hCanvas = document.getElementById("history-chart");
+    hCanvas.addEventListener("wheel", function(e) {
+      e.preventDefault();
+      var rect = hCanvas.getBoundingClientRect();
+      var mouseX = e.clientX - rect.left;
+      var dataLen = data.length;
+      var pad = { left: 72, right: 20, top: 28, bottom: 32 };
+      var chartW = rect.width - pad.left - pad.right;
+      var xRatio = (mouseX - pad.left) / chartW;
+      var pivotIdx = historyZoom.start + xRatio * (historyZoom.end - historyZoom.start);
+      var zoomFactor = e.deltaY > 0 ? 1.15 : 0.87;
+      var newSpan = (historyZoom.end - historyZoom.start) / zoomFactor;
+      // Clamp: min 1% of data, max full range
+      var minSpan = Math.max(0.01, 10 / dataLen); // at least 10 points
+      var maxSpan = 1;
+      newSpan = Math.max(minSpan, Math.min(maxSpan, newSpan));
+      var newStart = pivotIdx - xRatio * newSpan;
+      var newEnd = pivotIdx + (1 - xRatio) * newSpan;
+      if (newStart < 0) { newEnd -= newStart; newStart = 0; }
+      if (newEnd > 1) { newStart -= (newEnd - 1); newEnd = 1; }
+      newStart = Math.max(0, newStart);
+      newEnd = Math.min(1, newEnd);
+      if (newEnd - newStart >= minSpan) {
+        historyZoom = { start: newStart, end: newEnd };
+        // Redraw with zoomed data
+        var startPt = Math.floor(historyZoom.start * dataLen);
+        var endPt = Math.ceil(historyZoom.end * dataLen);
+        var clippedData = data.slice(startPt, endPt);
+        drawLineChart("history-chart", [
+          { label: "下載", color: "#0ea5e9", key: "rxBps" },
+          { label: "上傳", color: "#f59e0b", key: "txBps" },
+        ], clippedData);
+        // Update stats
+        var maxRx2 = 0, maxTx2 = 0;
+        for (var i = 0; i < clippedData.length; i++) {
+          if (clippedData[i].rxBps > maxRx2) maxRx2 = clippedData[i].rxBps;
+          if (clippedData[i].txBps > maxTx2) maxTx2 = clippedData[i].txBps;
+        }
+        document.getElementById("history-stats").innerHTML =
+          '<span style="color:#0ea5e9">最大下載: ' + (maxRx2 >= 1000000 ? (maxRx2/1e6).toFixed(1) + ' Mbps' : maxRx2 >= 1000 ? (maxRx2/1e3).toFixed(0) + ' Kbps' : maxRx2 + ' bps') + '</span>' +
+          '<span style="color:#f59e0b">最大上傳: ' + (maxTx2 >= 1000000 ? (maxTx2/1e6).toFixed(1) + ' Mbps' : maxTx2 >= 1000 ? (maxTx2/1e3).toFixed(0) + ' Kbps' : maxTx2 + ' bps') + '</span>' +
+          '<span style="color:#718096">顯示 ' + (startPt + 1) + '-' + endPt + ' / ' + dataLen + ' 筆 (滾輪縮放, 雙擊重置)</span>';
+      }
+    }, { passive: false });
+
+    // Double-click to reset zoom
+    hCanvas.addEventListener("dblclick", function() {
+      historyZoom = { start: 0, end: 1 };
+      loadHistory();
+    });
   } catch (e) {
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = "#f56565";
