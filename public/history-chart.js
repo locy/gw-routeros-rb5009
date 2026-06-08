@@ -132,15 +132,13 @@ function _setupHistoryZoom(canvas, fullData) {
     var rect = hCanvas.getBoundingClientRect();
     var pad = { left: 72, right: 20, top: 28, bottom: 32 };
     var chartW = rect.width - pad.left - pad.right;
-    var mouseX = e.clientX - rect.left;
-    var xRatio = (mouseX - pad.left) / chartW;
+    var dx = e.clientX - dragStartX;
     var zoomSpan = dragStartZoom.end - dragStartZoom.start;
-    // Pivot: keep the data point under cursor fixed
-    var pivot = dragStartZoom.start + xRatio * zoomSpan;
-    // New range centered around pivot
-    var halfSpan = zoomSpan / 2;
-    var newStart = pivot - xRatio * zoomSpan;
-    var newEnd = pivot + (1 - xRatio) * zoomSpan;
+    // Convert pixel shift to data ratio shift
+    var shift = -(dx / chartW) * zoomSpan;
+    var newStart = dragStartZoom.start + shift;
+    var newEnd = dragStartZoom.end + shift;
+    // Clamp to bounds
     if (newStart < 0) { newEnd -= newStart; newStart = 0; }
     if (newEnd > 1) { newStart -= (newEnd - 1); newEnd = 1; }
     historyZoom = { start: Math.max(0, newStart), end: Math.min(1, newEnd) };
@@ -229,7 +227,8 @@ function _setupHistoryZoom(canvas, fullData) {
 function _renderHistoryZoomed() {
   var canvas = document.getElementById("history-chart");
   if (!canvas) return;
-  var fullData = canvas.__clickData || [];
+  // Use __fullData (always the full dataset), not __clickData (which gets clipped by wheel)
+  var fullData = canvas.__fullData || canvas.__clickData || [];
   if (!fullData || fullData.length < 10) return;
   var dataLen = fullData.length;
   var startPt = Math.floor(historyZoom.start * dataLen);
