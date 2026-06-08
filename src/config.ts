@@ -25,6 +25,24 @@ function required(env: EnvSource, key: string): string {
   return value;
 }
 
+function parseBandwidth(env: EnvSource, key: string, fallback: number): number {
+  const raw = env[key]?.trim();
+  if (!raw) return fallback;
+  // Support "100M", "1G", "1.5G", "500K" etc.
+  const match = raw.match(/^(\d+(?:\.\d+)?)\s*(KB|MB|KB|K|M|G|TB|T)$/i) || raw.match(/^(\d+(?:\.\d+)?)$/);
+  if (!match) throw new Error(`${key} invalid format: "${raw}". Use e.g. "100M", "1G"`);
+  const value = parseFloat(match[1]);
+  const unitKey = match[2]?.toUpperCase() || "";
+  const multipliers: Record<string, number> = {
+    K: 1_000, KB: 1_000,
+    M: 1_000_000, MB: 1_000_000,
+    G: 1_000_000_000,
+    T: 1_000_000_000_000, TB: 1_000_000_000_000,
+  };
+  const multiplier = multipliers[unitKey] ?? 1;
+  return Math.trunc(value * multiplier);
+}
+
 function integer(env: EnvSource, key: string, fallback: number): number {
   const raw = env[key]?.trim();
   if (!raw) return fallback;
@@ -57,6 +75,6 @@ export async function loadSettings(
     bindHost: env.BIND_HOST?.trim() || "0.0.0.0",
     bindPort: integer(env, "BIND_PORT", 8080),
     mockMode: (env.MOCK_MODE ?? "false").toLowerCase() === "true",
-    spikeThresholdBps: integer(env, "SPIKE_THRESHOLD_BPS", 1_000_000_000),
+    spikeThresholdBps: parseBandwidth(env, "SPIKE_THRESHOLD_BPS", 1_000_000_000),
   };
 }
