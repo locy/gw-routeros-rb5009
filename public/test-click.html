@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html><head><style>
+body{background:#0b0f19;color:#e2e8f0;font-family:Inter,sans-serif;padding:20px}
+canvas{border:1px solid #2d3748;display:block;margin:10px 0}
+</style></head><body>
+<h2>Test: Canvas click → show data point values</h2>
+<div style="width:600px;height:240px;position:relative" id="container">
+<canvas id="test-canvas" width="600" height="240"></canvas>
+</div>
+<div id="result"></div>
+<script>
+// Simulate our chart parameters
+var pad = { top: 28, right: 20, bottom: 32, left: 72 };
+var width = 600, height = 240;
+var chartW = width - pad.left - pad.right; // 508
+var chartH = height - pad.top - pad.bottom; // 180
+var yMin = 0, yMax = 1000, chartRange = yMax - yMin;
+
+// Generate mock data (50 points)
+var data = [];
+for (var i = 0; i < 50; i++) {
+  data.push({ timestamp: new Date(Date.now() - (50-i)*5000), rxBps: Math.random()*800000000+100000000, txBps: Math.random()*400000000+50000000 });
+}
+
+// Draw the chart
+var canvas = document.getElementById('test-canvas');
+var ctx = canvas.getContext('2d');
+var dpr = window.devicePixelRatio || 1;
+canvas.width = width * dpr; canvas.height = height * dpr;
+canvas.style.width = width + 'px'; canvas.style.height = height + 'px';
+ctx.scale(dpr, dpr);
+ctx.clearRect(0, 0, width, height);
+
+// Draw grid
+ctx.strokeStyle = '#2d3748'; ctx.lineWidth = 1;
+for (var g = 0; g <= 4; g++) {
+  var gy = pad.top + (chartH / 4) * g;
+  ctx.beginPath(); ctx.moveTo(pad.left, gy); ctx.lineTo(width - pad.right, gy); ctx.stroke();
+  ctx.fillStyle = '#64748b'; ctx.font = '10px monospace'; ctx.textAlign = 'right';
+  ctx.fillText((yMax - (yMax/4)*g/1e6).toFixed(1) + 'M', pad.left - 8, gy);
+}
+
+// Draw line
+ctx.strokeStyle = '#0ea5e9'; ctx.lineWidth = 2; ctx.beginPath();
+for (var i = 0; i < data.length; i++) {
+  var x = pad.left + (i / (data.length - 1)) * chartW;
+  var v = Math.abs(data[i].rxBps);
+  var y = pad.top + chartH - ((v - yMin) / chartRange) * chartH;
+  if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+}
+ctx.stroke();
+
+// === Click handler ===
+canvas.addEventListener('click', function(e) {
+  var rect = canvas.getBoundingClientRect();
+  var mouseX = e.clientX - rect.left;
+  
+  // Calculate nearest data point index
+  var xRatio = (mouseX - pad.left) / chartW;
+  var idx = Math.round(xRatio * (data.length - 1));
+  idx = Math.max(0, Math.min(data.length - 1, idx));
+  
+  // Redraw clean chart
+  ctx.clearRect(0, 0, width, height);
+  // Re-draw grid
+  ctx.strokeStyle = '#2d3748'; ctx.lineWidth = 1;
+  for (var g = 0; g <= 4; g++) {
+    var gy = pad.top + (chartH / 4) * g;
+    ctx.beginPath(); ctx.moveTo(pad.left, gy); ctx.lineTo(width - pad.right, gy); ctx.stroke();
+  }
+  // Re-draw line
+  ctx.strokeStyle = '#0ea5e9'; ctx.lineWidth = 2; ctx.beginPath();
+  for (var i = 0; i < data.length; i++) {
+    var x = pad.left + (i / (data.length - 1)) * chartW;
+    var v = Math.abs(data[i].rxBps);
+    var y = pad.top + chartH - ((v - yMin) / chartRange) * chartH;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  
+  // Calculate point positions
+  var pointX = pad.left + (idx / (data.length - 1)) * chartW;
+  var rxVal = data[idx].rxBps;
+  var txVal = data[idx].txBps;
+  var rxY = pad.top + chartH - ((Math.abs(rxVal) - yMin) / chartRange) * chartH;
+  var txY = pad.top + chartH - ((Math.abs(txVal) - yMin) / chartRange) * chartH;
+  
+  // Vertical crosshair
+  ctx.strokeStyle = '#4a5568'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(pointX, pad.top); ctx.lineTo(pointX, pad.top + chartH); ctx.stroke();
+  ctx.setLineDash([]);
+  
+  // Dots
+  ctx.fillStyle = '#0ea5e9'; ctx.beginPath(); ctx.arc(pointX, rxY, 5, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#0b0f19'; ctx.lineWidth = 2; ctx.stroke();
+  
+  // Tooltip
+  var tooltipX = pointX + 12;
+  if (tooltipX + 160 > width) tooltipX = pointX - 172;
+  var tipY = Math.min(pad.top + 10, height - 80);
+  ctx.fillStyle = 'rgba(11,15,25,0.95)';
+  ctx.fillRect(tooltipX, tipY, 160, 55);
+  ctx.strokeStyle = '#2d3748'; ctx.strokeRect(tooltipX, tipY, 160, 55);
+  ctx.font = '11px monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillStyle = '#0ea5e9'; ctx.fillText('下載: ' + (rxVal/1e6).toFixed(1) + ' Mbps', tooltipX + 5, tipY + 5);
+  ctx.fillStyle = '#f59e0b'; ctx.fillText('上傳: ' + (txVal/1e6).toFixed(1) + ' Mbps', tooltipX + 5, tipY + 20);
+  var ts = new Date(data[idx].timestamp);
+  ctx.fillStyle = '#718096'; ctx.fillText(ts.getHours() + ':' + String(ts.getMinutes()).padStart(2,'0') + ':' + String(ts.getSeconds()).padStart(2,'0'), tooltipX + 5, tipY + 35);
+  ctx.fillStyle = '#e2e8f0'; ctx.fillText('點擊關閉', tooltipX + 5, tipY + 50);
+  
+  // Result display
+  document.getElementById('result').innerHTML = 
+    'idx=' + idx + ' xRatio=' + xRatio.toFixed(3) + 
+    '<br>RX: ' + (rxVal/1e6).toFixed(1) + ' Mbps<br>' +
+    'TX: ' + (txVal/1e6).toFixed(1) + ' Mbps<br>' +
+    'pointX=' + pointX.toFixed(1) + ' (should be within [72, ' + (width-20) + '])';
+});
+
+document.getElementById('result').innerHTML = '點擊圖表測試數值顯示...';
+</script>
+</body></html>

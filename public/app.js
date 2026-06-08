@@ -386,6 +386,175 @@ function drawLineChart(canvasId, series, data) {
     ctx.fillText(leg.label, legendX + 16, 8);
     legendX += ctx.measureText(leg.label).width + 36;
   }
+
+  // ---- Click overlay to show point values ----
+  canvas.__clickSeries = series;
+  canvas.__clickData = data;
+  canvas.__clickPad = pad;
+  canvas.__clickChartW = chartW;
+  canvas.__clickChartH = chartH;
+  canvas.__clickYMin = yMin;
+  canvas.__clickChartRange = chartRange;
+  canvas.__clickWidth = width;
+  canvas.__clickHeight = height;
+
+  if (!canvas.__clickOverlay) {
+    var overlayDiv = document.createElement("div");
+    overlayDiv.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;z-index:1;background:transparent";
+    canvas.parentElement.style.position = "relative";
+    canvas.parentElement.insertBefore(overlayDiv, canvas.nextSibling);
+    canvas.__clickOverlay = overlayDiv;
+  }
+  canvas.__clickOverlay.onclick = function(e) {
+    var rect = canvas.getBoundingClientRect();
+    showClickValues(canvas, e.clientX - rect.left);
+  };
+}
+
+function showClickValues(canvas, mouseX) {
+  var series = canvas.__clickSeries;
+  var data = canvas.__clickData;
+  if (!data || data.length < 2 || !series) return;
+
+  var pad = canvas.__clickPad;
+  var chartW = canvas.__clickChartW;
+  var chartH = canvas.__clickChartH;
+  var yMin = canvas.__clickYMin;
+  var chartRange = canvas.__clickChartRange;
+  var width = canvas.__clickWidth;
+  var height = canvas.__clickHeight;
+  if (!pad || chartW <= 0 || chartH <= 0) return;
+
+  // Find nearest data point
+  var xRatio = (mouseX - pad.left) / chartW;
+  var idx = Math.round(xRatio * (data.length - 1));
+  idx = Math.max(0, Math.min(data.length - 1, idx));
+
+  // Redraw clean chart
+  var ctx = canvas.getContext("2d");
+  var dpr = window.devicePixelRatio || 1;
+  ctx.save();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+
+  // Recalculate display params (same as drawLineChart)
+  var minVal = Infinity, maxVal = -Infinity;
+  for (var s = 0; s < series.length; s++) {
+    for (var i = 0; i < data.length; i++) {
+      var v = Math.abs(Number(data[i][series[s].key]));
+      if (v < minVal) minVal = v;
+      if (v > maxVal) maxVal = v;
+    }
+  }
+  minVal = Math.max(0, minVal);
+  var range = maxVal - minVal;
+  if (range < 100) range = 100;
+  var padding = range * 0.1;
+  yMin = minVal - padding;
+  var yMax = maxVal + padding;
+  if (yMin < 0) yMin = 0;
+  chartRange = yMax - yMin || 1;
+  var scaleExp = Math.pow(10, Math.floor(Math.log10(yMax)));
+  var displayMax = Math.ceil(yMax / scaleExp) * scaleExp;
+  var displayMin = Math.max(0, Math.floor(minVal / scaleExp) * scaleExp);
+  var displayRange = displayMax - displayMin || 1;
+  var displayChartRange = chartH;
+
+  // Grid
+  var chartH = canvas.__clickChartH;
+  ctx.strokeStyle = "#2d3748"; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+  for (var g = 0; g <= 4; g++) {
+    var gy = pad.top + (chartH / 4) * g;
+    ctx.beginPath(); ctx.moveTo(pad.left, gy); ctx.lineTo(width - pad.right, gy); ctx.stroke();
+    var val = displayMax - (displayRange / 4) * g;
+    ctx.fillStyle = "#64748b"; ctx.font = "11px Inter, monospace";
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    ctx.fillText(formatBps(val), pad.left - 8, gy);
+  }
+  ctx.setLineDash([]);
+
+  // Time labels
+  ctx.fillStyle = "#64748b"; ctx.font = "11px Inter, monospace";
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  var step = Math.max(1, Math.floor(data.length / 8));
+  for (var xi = 0; xi < data.length; xi += step) {
+    var xPos = pad.left + (xi / (data.length - 1)) * chartW;
+    ctx.fillText(formatTime(data[xi].timestamp), xPos, height - 12);
+  }
+
+  // Lines
+  for (var si = 0; si < series.length; si++) {
+    var s = series[si];
+    ctx.strokeStyle = s.color; ctx.lineWidth = 2;
+    ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.beginPath();
+    for (var li = 0; li < data.length; li++) {
+      var v = Number(data[li][s.key]) || 0;
+      var av = Math.abs(v);
+      var x = pad.left + (li / (data.length - 1)) * chartW;
+      var y = pad.top + chartH - ((av - yMin) / chartRange) * chartH;
+      y = Math.max(pad.top, Math.min(pad.top + chartH, y));
+      if (li === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  // Legend
+  ctx.font = "12px Inter, sans-serif";
+  var legendX = pad.left;
+  for (var ls = 0; ls < series.length; ls++) {
+    var leg = series[ls];
+    ctx.fillStyle = leg.color;
+    ctx.fillRect(legendX, 6, 12, 12);
+    ctx.fillStyle = "#94a3b8";
+    ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText(leg.label, legendX + 16, 8);
+    legendX += ctx.measureText(leg.label).width + 36;
+  }
+  ctx.restore();
+
+  // Click overlay: crosshair + dots + tooltip
+  var pointX = pad.left + (idx / (data.length - 1)) * chartW;
+  var chartH = canvas.__clickChartH;
+
+  // Crosshair
+  ctx.strokeStyle = "#4a5568"; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(pointX, pad.top); ctx.lineTo(pointX, pad.top + chartH); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Dots on each series
+  for (var si2 = 0; si2 < series.length; si2++) {
+    var val = Number(data[idx][series[si2].key]) || 0;
+    var dotY = pad.top + chartH - ((Math.abs(val) - yMin) / chartRange) * chartH;
+    dotY = Math.max(pad.top, Math.min(pad.top + chartH, dotY));
+    ctx.fillStyle = series[si2].color; ctx.beginPath();
+    ctx.arc(pointX, dotY, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#0b0f19"; ctx.lineWidth = 2; ctx.stroke();
+  }
+
+  // Tooltip
+  var tooltipX = pointX + 12;
+  var tooltipMaxW = 180;
+  if (tooltipX + tooltipMaxW > width) tooltipX = pointX - tooltipMaxW - 12;
+  if (tooltipX < pad.left) tooltipX = pad.left;
+  var tooltipY = pad.top + 10;
+
+  ctx.fillStyle = "rgba(11,15,25,0.95)";
+  ctx.fillRect(tooltipX, tooltipY, tooltipMaxW, 20 * (series.length + 1));
+  ctx.strokeStyle = "#2d3748"; ctx.lineWidth = 1;
+  ctx.strokeRect(tooltipX, tooltipY, tooltipMaxW, 20 * (series.length + 1));
+  ctx.font = "11px Inter, monospace"; ctx.textAlign = "left"; ctx.textBaseline = "top";
+
+  for (var si3 = 0; si3 < series.length; si3++) {
+    var v2 = Number(data[idx][series[si3].key]) || 0;
+    ctx.fillStyle = series[si3].color;
+    ctx.fillText(series[si3].label + ": " + formatBps(Math.abs(v2)), tooltipX + 6, tooltipY + 4 + si3 * 20);
+  }
+  var t = data[idx].timestamp;
+  ctx.fillStyle = "#718096";
+  ctx.fillText(t ? t.toTimeString().slice(0, 8) : "", tooltipX + 6, tooltipY + (series.length + 1) * 20 - 16);
+
+  // Store for redraw detection
+  canvas.__clickOverlay._shownIdx = idx;
 }
 
 // ---- Tab switching ---
