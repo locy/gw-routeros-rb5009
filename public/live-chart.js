@@ -3,6 +3,8 @@
 
 var wanKey = null;
 var lanKey = null;
+var wanK = null;
+var lanK = null;
 
 function findInterfaceKey(role) {
   if (role === "wan" && wanKey) return wanKey;
@@ -24,9 +26,11 @@ function colorForBps(bps) {
 }
 
 window.updateLiveDisplay = function() {
+  var currentWanK = findInterfaceKey("wan");
+  var currentLanK = findInterfaceKey("lan");
 
-  if (wanK) {
-    var wanArr = samples.get(wanK);
+  if (currentWanK) {
+    var wanArr = samples.get(currentWanK);
     if (wanArr && wanArr.length > 0) {
       var w = wanArr[wanArr.length - 1];
       if (wanEl) {
@@ -37,8 +41,8 @@ window.updateLiveDisplay = function() {
     }
   }
 
-  if (lanK) {
-    var lanArr = samples.get(lanK);
+  if (currentLanK) {
+    var lanArr = samples.get(currentLanK);
     if (lanArr && lanArr.length > 0) {
       var l = lanArr[lanArr.length - 1];
       if (lanEl) {
@@ -119,6 +123,10 @@ window.connectWS = function() {
       console.log("[WS] status set to offline");
     }
     setTimeout(connectWS, 3000);
+  });
+
+  ws.addEventListener("error", function (err) {
+    console.log("[WS] error event", err);
   });
 }
 

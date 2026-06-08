@@ -182,17 +182,15 @@
 
     ws.addEventListener("open", function() {
       addLog("info", "WS connected ✓ " + url);
-      // Override onmessage to log samples
-      var origOnmessage = ws.onmessage;
-      ws.onmessage = function(ev) {
-        try {
-          var data = JSON.parse(ev.data);
-          if (data.type === "sample") {
-            addLog("info", "WS sample ← " + data.payload.interface + " rx=" + data.payload.rxBps + " tx=" + data.payload.txBps);
-          }
-        } catch(e) { /* not JSON */ }
-        if (origOnmessage) origOnmessage.apply(ws, arguments);
-      };
+    });
+
+    ws.addEventListener("message", function(ev) {
+      try {
+        var data = JSON.parse(ev.data);
+        if (data.type === "sample") {
+          addLog("info", "WS sample ← " + data.payload.interface + " rx=" + data.payload.rxBps + " tx=" + data.payload.txBps);
+        }
+      } catch(e) { /* not JSON */ }
     });
 
     ws.addEventListener("close", function(ev) {

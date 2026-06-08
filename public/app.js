@@ -109,3 +109,6 @@ function waitForInit() {
     setTimeout(waitForInit, 50);
   }
 }
+
+// Start initialization
+waitForInit();
