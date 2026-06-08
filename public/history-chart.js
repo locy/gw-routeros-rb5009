@@ -132,13 +132,15 @@ function _setupHistoryZoom(canvas, fullData) {
     var rect = hCanvas.getBoundingClientRect();
     var pad = { left: 72, right: 20, top: 28, bottom: 32 };
     var chartW = rect.width - pad.left - pad.right;
-    var dx = e.clientX - dragStartX;
-    var dataLen = canvas.__fullData ? canvas.__fullData.length : fullData.length;
+    var mouseX = e.clientX - rect.left;
+    var xRatio = (mouseX - pad.left) / chartW;
     var zoomSpan = dragStartZoom.end - dragStartZoom.start;
-    var pixelToRatio = zoomSpan / chartW;
-    var shift = -dx * pixelToRatio;
-    var newStart = dragStartZoom.start + shift;
-    var newEnd = dragStartZoom.end + shift;
+    // Pivot: keep the data point under cursor fixed
+    var pivot = dragStartZoom.start + xRatio * zoomSpan;
+    // New range centered around pivot
+    var halfSpan = zoomSpan / 2;
+    var newStart = pivot - xRatio * zoomSpan;
+    var newEnd = pivot + (1 - xRatio) * zoomSpan;
     if (newStart < 0) { newEnd -= newStart; newStart = 0; }
     if (newEnd > 1) { newStart -= (newEnd - 1); newEnd = 1; }
     historyZoom = { start: Math.max(0, newStart), end: Math.min(1, newEnd) };
