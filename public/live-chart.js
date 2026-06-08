@@ -57,16 +57,26 @@ function updateLiveDisplay() {
 function drawCharts() {
   var wanK = findInterfaceKey("wan");
   var lanK = findInterfaceKey("lan");
+  var wanData = samples.get(wanK) || [];
+  var lanData = samples.get(lanK) || [];
 
   drawLineChart("live-chart", [
     { label: "WAN ↓", color: "#0ea5e9", key: "rxBps" },
     { label: "WAN ↑", color: "#f59e0b", key: "txBps" },
-  ], samples.get(wanK) || []);
+  ], wanData);
+  setupClickOverlay("live-chart", [
+    { label: "WAN ↓", color: "#0ea5e9", key: "rxBps" },
+    { label: "WAN ↑", color: "#f59e0b", key: "txBps" },
+  ], wanData);
 
   drawLineChart("live-chart-lan", [
     { label: "LAN ↓", color: "#10b981", key: "rxBps" },
     { label: "LAN ↑", color: "#8b5cf6", key: "txBps" },
-  ], samples.get(lanK) || []);
+  ], lanData);
+  setupClickOverlay("live-chart-lan", [
+    { label: "LAN ↓", color: "#10b981", key: "rxBps" },
+    { label: "LAN ↑", color: "#8b5cf6", key: "txBps" },
+  ], lanData);
 }
 
 // ---- WebSocket connection ----
@@ -254,10 +264,6 @@ function setupClickOverlay(canvasId, series, data) {
   var canvas = document.getElementById(canvasId);
   if (!canvas) return;
 
-  // Store click state
-  canvas.__clickSeries = series;
-  canvas.__clickData = data;
-
   var rect = canvas.parentElement.getBoundingClientRect();
   var width = rect.width;
   var height = 240;
@@ -265,9 +271,36 @@ function setupClickOverlay(canvasId, series, data) {
   var chartW = width - pad.left - pad.right;
   var chartH = height - pad.top - pad.bottom;
 
+  // Compute yMin/chartRange from data (same logic as drawLineChart)
+  var yMin = 0;
+  var chartRange = 1;
+  if (data && data.length > 0) {
+    var minVal = Infinity, maxVal = -Infinity;
+    for (var i = 0; i < data.length; i++) {
+      for (var s = 0; s < series.length; s++) {
+        var v = Math.abs(Number(data[i][series[s].key]));
+        if (v < minVal) minVal = v;
+        if (v > maxVal) maxVal = v;
+      }
+    }
+    minVal = Math.max(0, minVal);
+    var rng = maxVal - minVal;
+    if (rng < 100) rng = 100;
+    var padding = rng * 0.1;
+    yMin = minVal - padding;
+    if (yMin < 0) yMin = 0;
+    var yMax = maxVal + padding;
+    chartRange = yMax - yMin || 1;
+  }
+
+  // Store click state
+  canvas.__clickSeries = series;
+  canvas.__clickData = data;
   canvas.__clickPad = pad;
   canvas.__clickChartW = chartW;
   canvas.__clickChartH = chartH;
+  canvas.__clickYMin = yMin;
+  canvas.__clickChartRange = chartRange;
   canvas.__clickWidth = width;
   canvas.__clickHeight = height;
 

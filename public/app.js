@@ -101,8 +101,10 @@ function switchTab(tab) {
   document.getElementById("panel-history").style.display = tab === "history" ? "" : "none";
 }
 
-document.getElementById("tab-live").addEventListener("click", function() { switchTab("live"); });
-document.getElementById("tab-history").addEventListener("click", function() { switchTab("history"); });
+var _tabLiveEl = document.getElementById("tab-live");
+var _tabHistoryEl = document.getElementById("tab-history");
+if (_tabLiveEl) _tabLiveEl.addEventListener("click", function() { switchTab("live"); });
+if (_tabHistoryEl) _tabHistoryEl.addEventListener("click", function() { switchTab("history"); });
 window._switchTab = switchTab;
 
 // ---- Init ----
@@ -110,3 +112,17 @@ window._switchTab = switchTab;
 connectWS();
 startPeriodicFetches();
 initHistoryChart();
+
+// Re-apply tab click handlers AFTER initHistoryChart to include the wrapper
+(function() {
+  var liveEl = document.getElementById("tab-live");
+  var histEl = document.getElementById("tab-history");
+  if (liveEl) {
+    liveEl.addEventListener("click", function() { switchTab("live"); });
+  }
+  if (histEl) {
+    histEl.addEventListener("click", function() {
+      window._switchTab("history");
+    });
+  }
+})();
