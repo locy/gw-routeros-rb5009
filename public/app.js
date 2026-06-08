@@ -18,16 +18,24 @@ function setConnectionStatus(color, text) {
 
 function mbps(value) {
   var abs = Math.abs(value);
-  if (abs < 1_000) return abs.toFixed(0) + " bps";
-  if (abs < 1_000_000) return (abs / 1_000).toFixed(0) + " Kbps";
-  return (abs / 1_000_000).toFixed(2) + " Mbps";
+  if (abs < 1000) return abs.toFixed(0) + " bps";
+  if (abs < 1000000) return (abs / 1000).toFixed(0) + " Kbps";
+  return (abs / 1000000).toFixed(2) + " Mbps";
 }
 
 function colorForBps(bps) {
-  if (bps === 0) return "#374151";
-  if (bps < 1_000_000) return "#a5f3fc";
-  if (bps < 10_000_000) return "#7dd3fc";
-  return "#60a5fa";
+  if (bps === 0) return "#4b5563";
+  if (bps < 1000000) return "#67e8f9";
+  if (bps < 10000000) return "#60a5fa";
+  return "#a78bfa";
+}
+
+function formatTime(dateStr) {
+  var d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "??:??";
+  var hh = d.getHours().toString().padStart(2, "0");
+  var mm = d.getMinutes().toString().padStart(2, "0");
+  return hh + ":" + mm;
 }
 
 // ---- WebSocket connection ----
@@ -51,8 +59,11 @@ function connectWS() {
         var arr = samples.get(sample.interface);
         arr.push(sample);
         while (arr.length > MAX_CHART_POINTS) arr.shift();
-        drawCharts();
-        updateLiveDisplay();
+        // Force DOM update
+        setTimeout(function () {
+          updateLiveDisplay();
+          drawCharts();
+        }, 0);
       }
     } catch (e) {
       // ignore
@@ -68,24 +79,38 @@ function connectWS() {
 // ---- Live display update (from WS only) ----
 
 function updateLiveDisplay() {
-  samples.forEach(function (arr, iface) {
-    if (arr.length === 0) return;
-    var last = arr[arr.length - 1];
-    var elId = iface === "ether1" ? "wan-now" : "lan-now";
-    var el = document.getElementById(elId);
-    if (!el) return;
+  var wanEl = document.getElementById("wan-now");
+  var lanEl = document.getElementById("lan-now");
 
-    var rx = last.rxBps || 0;
-    var tx = last.txBps || 0;
-    el.innerHTML = '<span style="color:' + colorForBps(rx) + '">' + mbps(rx) + ' ↓</span>' +
-      ' / ' +
-      '<span style="color:' + colorForBps(tx) + '">' + mbps(tx) + ' ↑</span>';
-  });
+  var wanArr = samples.get("ether1");
+  if (wanArr && wanArr.length > 0) {
+    var w = wanArr[wanArr.length - 1];
+    if (wanEl) {
+      wanEl.innerHTML = '<span style="color:' + colorForBps(w.rxBps) + '">' + mbps(w.rxBps) + ' ↓</span>' +
+        ' / ' +
+        '<span style="color:' + colorForBps(w.txBps) + '">' + mbps(w.txBps) + ' ↑</span>';
+    }
+  }
+
+  var lanArr = samples.get("bridge");
+  if (lanArr && lanArr.length > 0) {
+    var l = lanArr[lanArr.length - 1];
+    if (lanEl) {
+      lanEl.innerHTML = '<span style="color:' + colorForBps(l.rxBps) + '">' + mbps(l.rxBps) + ' ↓</span>' +
+        ' / ' +
+        '<span style="color:' + colorForBps(l.txBps) + '">' + mbps(l.txBps) + ' ↑</span>';
+    }
+  }
 }
 
 // ---- Canvas chart ----
 
 function drawCharts() {
+  var ether = samples.get("ether1");
+  console.log("[drawCharts] ether samples:", ether ? ether.length : "undefined");
+  if (ether && ether.length > 0) {
+    console.log("[drawCharts] first sample:", ether[0].timestamp, ether[0].rxBps);
+  }
   drawLineChart("live-chart", [
     { label: "WAN ↓", color: "#0ea5e9", key: "rxBps" },
     { label: "WAN ↑", color: "#f59e0b", key: "txBps" },
@@ -104,30 +129,37 @@ function drawLineChart(canvasId, series, data) {
   var ctx = canvas.getContext("2d");
   if (!ctx) return;
 
+  // Force canvas sizing based on parent container
+  var rect = canvas.parentElement.getBoundingClientRect();
+  var width = rect.width;
+  var height = 240;
   var dpr = window.devicePixelRatio || 1;
-  var rect = canvas.getBoundingClientRect();
-  console.log("[draw] " + canvasId + " rect:", rect.width, rect.height);
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  ctx.scale(dpr, dpr);
-  var W = rect.width;
-  var H = rect.height;
 
-  ctx.clearRect(0, 0, W, H);
+  // Set actual canvas size (scaled for retina)
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  // Set CSS size
+  canvas.style.width = width + "px";
+  canvas.style.height = height + "px";
+
+  ctx.scale(dpr, dpr);
+
+  // Clear entire canvas
+  ctx.clearRect(0, 0, width, height);
+
+  var pad = { top: 28, right: 20, bottom: 32, left: 72 };
+  var chartW = width - pad.left - pad.right;
+  var chartH = height - pad.top - pad.bottom;
 
   if (data.length < 2) {
     ctx.fillStyle = "#4b5563";
     ctx.font = "14px Inter, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("累積至少 2 筆資料後繪製圖表", W / 2, H / 2);
+    ctx.fillText("累積至少 2 筆資料後繪製圖表", width / 2, height / 2);
     return;
   }
 
-  var pad = { top: 24, right: 16, bottom: 28, left: 68 };
-  var cW = W - pad.left - pad.right;
-  var cH = H - pad.top - pad.bottom;
-
-  // Compute global max
+  // Compute global max across all series in dataset
   var globalMax = 1;
   for (var s = 0; s < series.length; s++) {
     for (var i = 0; i < data.length; i++) {
@@ -135,81 +167,88 @@ function drawLineChart(canvasId, series, data) {
       if (v > globalMax) globalMax = v;
     }
   }
+  // Round up to nice scale
   var exp = Math.pow(10, Math.ceil(Math.log10(globalMax)) - 1);
   globalMax = exp;
 
-  // Grid
-  ctx.strokeStyle = "#2d3748";
+  // ---- Grid lines ----
+  ctx.strokeStyle = "#1e293b";
   ctx.lineWidth = 1;
   ctx.setLineDash([4, 4]);
   for (var g = 0; g <= 4; g++) {
-    var y = pad.top + (cH / 4) * g;
+    var gy = pad.top + (chartH / 4) * g;
     ctx.beginPath();
-    ctx.moveTo(pad.left, y);
-    ctx.lineTo(W - pad.right, y);
+    ctx.moveTo(pad.left, gy);
+    ctx.lineTo(width - pad.right, gy);
     ctx.stroke();
 
+    // Y-axis labels
     var val = globalMax - (globalMax / 4) * g;
-    ctx.fillStyle = "#9ca3af";
-    ctx.font = "11px Inter, sans-serif";
+    ctx.fillStyle = "#64748b";
+    ctx.font = "11px Inter, monospace";
     ctx.textAlign = "right";
-    ctx.fillText(mbps(val), pad.left - 6, y + 4);
+    ctx.textBaseline = "middle";
+    ctx.fillText(mbps(val), pad.left - 8, gy);
   }
   ctx.setLineDash([]);
 
-  // X labels
-  ctx.fillStyle = "#9ca3af";
-  ctx.font = "11px Inter, sans-serif";
+  // ---- X-axis time labels ----
+  ctx.fillStyle = "#64748b";
+  ctx.font = "11px Inter, monospace";
   ctx.textAlign = "center";
-  var step = Math.max(1, Math.floor(data.length / 6));
+  ctx.textBaseline = "top";
+  var step = Math.max(1, Math.floor(data.length / 8));
   for (var xi = 0; xi < data.length; xi += step) {
-    var x = pad.left + (xi / (data.length - 1)) * cW;
-    var t = new Date(data[xi].timestamp);
-    var hh = t.getHours().toString().padStart(2, "0");
-    var mm = t.getMinutes().toString().padStart(2, "0");
-    ctx.fillText(hh + ":" + mm, x, H - 6);
+    var xPos = pad.left + (xi / (data.length - 1)) * chartW;
+    ctx.fillText(formatTime(data[xi].timestamp), xPos, height - 12);
   }
 
-  // Lines
+  // ---- Draw lines ----
   for (var si = 0; si < series.length; si++) {
-    ctx.strokeStyle = series[si].color;
+    var s = series[si];
+    ctx.strokeStyle = s.color;
     ctx.lineWidth = 2;
     ctx.lineJoin = "round";
+    ctx.lineCap = "round";
     ctx.beginPath();
-    var first = true;
+
     for (var li = 0; li < data.length; li++) {
-      var val = Number(data[li][series[si].key]);
-      var lx2 = pad.left + (li / (data.length - 1)) * cW;
-      var ly = pad.top + cH - (Math.abs(val) / globalMax) * cH;
-      if (first) {
-        ctx.moveTo(lx2, ly);
-        first = false;
+      var v = Number(data[li][s.key]) || 0;
+      var x = pad.left + (li / (data.length - 1)) * chartW;
+      var y = pad.top + chartH - (Math.abs(v) / globalMax) * chartH;
+
+      if (li === 0) {
+        ctx.moveTo(x, y);
       } else {
-        ctx.lineTo(lx2, ly);
+        ctx.lineTo(x, y);
       }
     }
     ctx.stroke();
 
     // Last point dot
-    var lastPt = data[data.length - 1];
-    var dotX = pad.left + cW;
-    var dotY = pad.top + cH - (Math.abs(Number(lastPt[series[si].key])) / globalMax) * cH;
-    ctx.fillStyle = series[si].color;
-    ctx.beginPath();
-    ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
-    ctx.fill();
+    if (data.length > 0) {
+      var lastVal = Number(data[data.length - 1][s.key]) || 0;
+      var dotX = pad.left + chartW;
+      var dotY = pad.top + chartH - (Math.abs(lastVal) / globalMax) * chartH;
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.arc(dotX, dotY, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
-  // Legend
+  // ---- Legend ----
   ctx.font = "12px Inter, sans-serif";
   var legendX = pad.left;
   for (var ls = 0; ls < series.length; ls++) {
-    ctx.fillStyle = series[ls].color;
-    ctx.fillRect(legendX, 4, 12, 12);
-    ctx.fillStyle = "#d1d5db";
+    var leg = series[ls];
+    ctx.fillStyle = leg.color;
+    ctx.fillRect(legendX, 6, 12, 12);
+    ctx.fillStyle = "#94a3b8";
     ctx.textAlign = "left";
-    ctx.fillText(series[ls].label, legendX + 16, 14);
-    legendX += ctx.measureText(series[ls].label).width + 32;
+    ctx.textBaseline = "top";
+    ctx.fillText(leg.label, legendX + 16, 8);
+    legendX += ctx.measureText(leg.label).width + 36;
   }
 }
 
