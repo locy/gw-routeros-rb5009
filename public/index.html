@@ -23,26 +23,20 @@
         </div>
       </header>
       <section class="dashboard-grid">
-        <section class="metric-card">
-          <span>WAN 即時</span><strong id="wan-now">等待資料</strong>
+        <section class="panel metric-row">
+          <span>WAN 即時</span>
+          <strong id="wan-now">等待資料</strong>
         </section>
-        <section class="metric-card">
-          <span>LAN 即時</span><strong id="lan-now">等待資料</strong>
+        <section class="panel metric-row">
+          <span>LAN 即時</span>
+          <strong id="lan-now">等待資料</strong>
         </section>
 
         <section class="panel chart-panel">
-          <h2>WAN 即時流量</h2><canvas
-            id="live-chart"
-            width="960"
-            height="240"
-          ></canvas>
+          <h2>WAN 即時流量</h2><canvas id="live-chart" width="960" height="240"></canvas>
         </section>
         <section class="panel chart-panel">
-          <h2>LAN 即時流量</h2><canvas
-            id="live-chart-lan"
-            width="960"
-            height="240"
-          ></canvas>
+          <h2>LAN 即時流量</h2><canvas id="live-chart-lan" width="960" height="240"></canvas>
         </section>
         <section class="panel">
           <h2>Top IP / MAC</h2>

@@ -97,8 +97,26 @@ button:hover {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+}
+
+.metric-row span {
+  color: #718096;
+  font-size: 14px;
+}
+
+.metric-row strong {
+  font-size: 20px;
+  line-height: 1.2;
+  color: #e2e8f0;
 }
 
 .metric-card,
@@ -109,17 +127,7 @@ button:hover {
   padding: 16px;
 }
 
-.metric-card span {
-  display: block;
-  color: #718096;
-  margin-bottom: 10px;
-}
 
-.metric-card strong {
-  font-size: 22px;
-  line-height: 1.2;
-  color: #e2e8f0;
-}
 
 .chart-panel {
   grid-column: span 3;
