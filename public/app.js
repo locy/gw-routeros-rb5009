@@ -160,17 +160,25 @@ function drawLineChart(canvasId, series, data) {
     return;
   }
 
-  // Compute global max across all series in dataset
-  var globalMax = 1;
+  // Compute max value across all series in dataset
+  var maxVal = 1;
   for (var s = 0; s < series.length; s++) {
     for (var i = 0; i < data.length; i++) {
       var v = Math.abs(Number(data[i][series[s].key]));
-      if (v > globalMax) globalMax = v;
+      if (v > maxVal) maxVal = v;
     }
   }
-  // Round up to nice scale
-  var exp = Math.pow(10, Math.ceil(Math.log10(globalMax)) - 1);
-  globalMax = exp;
+  // Round up to nice scale: find smallest power-of-10 multiple >= maxVal
+  var scale = Math.pow(10, Math.floor(Math.log10(maxVal)));
+  if (scale < maxVal) scale *= 10;
+  // e.g. maxVal=200000 → floor(log10)=5 → 10^5=100000 < 200000 → 200000
+  // e.g. maxVal=287942 → floor(log10)=5 → 10^5=100000 < 287942 → 200000
+  // But we want round numbers, not 200000. Use 500000 for 287942.
+  // Better: use powers of 10
+  scale = Math.pow(10, Math.ceil(Math.log10(maxVal)));
+  // e.g. 287942 → ceil(log10) = 6 → 10^6 = 1000000
+  // e.g. 199960 → ceil(log10) = 6 → 10^6 = 1000000
+  var globalMax = scale;
   console.log("[chart] " + canvasId + " len=" + data.length, "globalMax=" + globalMax, "chartW=" + chartW + " chartH=" + chartH);
   console.log("[chart] " + canvasId + " data[0][rxBps]=" + data[0].rxBps, "data[-1][rxBps]=" + data[data.length-1].rxBps);
 
