@@ -387,8 +387,28 @@ function drawLineChart(canvasId, series, data) {
     legendX += ctx.measureText(leg.label).width + 36;
   }
 
-  // ---- Legend (already drawn) ----
-  // Done.
+  // ---- Click overlay ----
+  // Store state for click interaction
+  canvas.__clickData = data;
+  canvas.__clickSeries = series;
+  canvas.__clickParams = p;
+
+  if (!canvas.__clickOverlay) {
+    var overlayDiv = document.createElement("div");
+    overlayDiv.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;cursor:pointer;z-index:10";
+    canvas.parentElement.style.position = "relative";
+    canvas.parentElement.insertBefore(overlayDiv, canvas.nextSibling);
+    canvas.__clickOverlay = overlayDiv;
+
+    overlayDiv.onclick = function(e) {
+      var r = canvas.getBoundingClientRect();
+      drawClickOverlay(canvas, e.clientX - r.left);
+    };
+  } else {
+    // Redraw: clear any existing tooltip overlay
+    var ov = canvas.__clickOverlay;
+    while (ov.firstChild) ov.removeChild(ov.firstChild);
+  }
 }
 
 function redrawCanvas(canvas) {
@@ -397,11 +417,11 @@ function redrawCanvas(canvas) {
   ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
 }
 
-function drawHover(canvas, mouseX) {
+function drawClickOverlay(canvas, mouseX) {
   var ctx = canvas.getContext("2d");
-  var data = canvas.__data;
-  var series = canvas.__series;
-  var p = canvas.__chartParams;
+  var data = canvas.__clickData;
+  var series = canvas.__clickSeries;
+  var p = canvas.__clickParams;
   if (!data || !series || !p || !p.pad) return;
 
   // Find nearest data point
@@ -411,9 +431,8 @@ function drawHover(canvas, mouseX) {
   var idx = Math.round(xRatio * (data.length - 1));
   idx = Math.max(0, Math.min(data.length - 1, idx));
 
-  // Redraw original chart
+  // Redraw chart body
   redrawCanvas(canvas);
-  // Redraw full chart to restore lines/grid
   drawChartBody(canvas, series, data, p);
 
   var pointX = p.pad.left + (idx / (data.length - 1)) * chartW2;
@@ -443,7 +462,7 @@ function drawHover(canvas, mouseX) {
   }
 
   // Tooltip box
-  var hoverDiv = canvas.__hoverDiv;
+  var overlayDiv = canvas.__clickOverlay;
   var lines = [];
   for (var si2 = 0; si2 < series.length; si2++) {
     var val2 = Number(data[idx][series[si2].key]) || 0;
@@ -453,13 +472,28 @@ function drawHover(canvas, mouseX) {
   var t = data[idx].timestamp;
   var timeStr = t ? t.toTimeString().slice(0, 8) : "";
   lines.push('<span style="color:#718096">' + timeStr + '</span>');
-  hoverDiv.innerHTML = '<div style="position:absolute;left:' + (pointX + 12) + 'px;top:8px;background:rgba(11,15,25,0.95);border:1px solid #2d3748;border-radius:4px;padding:6px 10px;font-size:12px;line-height:1.6;white-space:nowrap;pointer-events:none;z-index:10">' + lines.join('<br>') + '</div>';
+  lines.push('<span style="color:#e2e8f0">點擊其他處關閉</span>');
+
+  var tooltip = document.createElement('div');
+  tooltip.style.cssText = 'position:absolute;left:' + (pointX + 12) + 'px;top:8px;background:rgba(11,15,25,0.95);border:1px solid #2d3748;border-radius:4px;padding:6px 10px;font-size:12px;line-height:1.6;white-space:nowrap;pointer-events:none;z-index:20';
+  tooltip.innerHTML = lines.join('<br>');
+  overlayDiv.appendChild(tooltip);
 
   // Keep tooltip within bounds
-  var tipRect = hoverDiv.querySelector('div');
-  if (tipRect && pointX + 12 + tipRect.offsetWidth > canvas.getBoundingClientRect().width) {
-    tipRect.style.left = (pointX - tipRect.offsetWidth - 12) + 'px';
+  if (pointX + 12 + tooltip.offsetWidth > canvas.parentElement.offsetWidth) {
+    tooltip.style.left = (pointX - tooltip.offsetWidth - 12) + 'px';
   }
+
+  // Click elsewhere on overlay dismisses
+  overlayDiv.onclick = function(e) {
+    // Redraw clean chart
+    drawLineChart(canvas.id, series, data);
+    // Re-add click handler
+    overlayDiv.onclick = function(e2) {
+      var r = canvas.getBoundingClientRect();
+      drawClickOverlay(canvas, e2.clientX - r.left);
+    };
+  };
 }
 
 function drawChartBody(canvas, series, data, p) {
