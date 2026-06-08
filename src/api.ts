@@ -99,6 +99,37 @@ export function createHandler(
     if (url.pathname === "/api/events") {
       return json(db.getRecentEvents(20));
     }
+    if (url.pathname === "/api/debug/state") {
+      // Return latest browser snapshot (served via fetch from browser)
+      const cached = (globalThis as Record<string, unknown>).__debugState;
+      if (cached && typeof cached === "object") {
+        return json(cached);
+      }
+      return json({ error: "no snapshot yet", timestamp: new Date().toISOString() });
+    }
+    if (url.pathname === "/api/debug/history") {
+      const cached = (globalThis as Record<string, unknown>).__debugHistory;
+      if (cached && Array.isArray(cached)) {
+        return json(cached.slice(-20));
+      }
+      return json([]);
+    }
+    if (url.pathname === "/api/debug/snapshot" && request.method === "POST") {
+      // Receive snapshot from browser for AI debugging
+      const snap = await request.json();
+      (globalThis as Record<string, unknown>).__debugState = snap;
+      let hist = (globalThis as Record<string, unknown>).__debugHistory as Record<string, unknown>[] | undefined;
+      if (!hist) { hist = []; (globalThis as Record<string, unknown>).__debugHistory = hist; }
+      hist.push(snap as Record<string, unknown>);
+      if (hist.length > 100) hist.shift();
+      (globalThis as Record<string, unknown>).__debugHistory = hist;
+      return json({ ok: true, total: hist.length });
+    }
+    if (url.pathname === "/api/debug/reset") {
+      delete (globalThis as Record<string, unknown>).__debugState;
+      delete (globalThis as Record<string, unknown>).__debugHistory;
+      return json({ ok: true });
+    }
     return serveDir(request, { fsRoot: publicDir, urlRoot: "" });
   };
 }
