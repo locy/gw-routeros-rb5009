@@ -102,7 +102,63 @@ function _setupHistoryZoom(canvas, fullData) {
   overlay.parentNode.replaceChild(newOverlay, overlay);
   canvas.__clickOverlay = newOverlay;
 
-  // Re-attach click handler after cloneNode
+  // Drag to pan + click to show values
+  // Store fullData on canvas for drag access
+  canvas.__fullData = fullData;
+
+  var isDragging = false;
+  var dragStartX = 0;
+  var dragStartZoom = { start: 0, end: 1 };
+
+  newOverlay.onmousedown = function(e) {
+    if (e.button !== 0) return;
+    // Only drag when zoomed in (not full range)
+    if (historyZoom.end - historyZoom.start >= 0.99) {
+      // Single click on unzoomed chart
+      var rect2 = canvas.getBoundingClientRect();
+      showClickValues(canvas, e.clientX - rect2.left, { rangeSeconds: parseInt(_historyRangeSeconds, 10) || 86400 });
+      return;
+    }
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartZoom = { start: historyZoom.start, end: historyZoom.end };
+    newOverlay.style.cursor = "grabbing";
+    e.preventDefault();
+  };
+
+  document.addEventListener("mousemove", function(e) {
+    if (!isDragging) return;
+    var hCanvas = document.getElementById("history-chart");
+    var rect = hCanvas.getBoundingClientRect();
+    var pad = { left: 72, right: 20, top: 28, bottom: 32 };
+    var chartW = rect.width - pad.left - pad.right;
+    var dx = e.clientX - dragStartX;
+    var dataLen = canvas.__fullData ? canvas.__fullData.length : fullData.length;
+    var zoomSpan = dragStartZoom.end - dragStartZoom.start;
+    var pixelToRatio = zoomSpan / chartW;
+    var shift = -dx * pixelToRatio;
+    var newStart = dragStartZoom.start + shift;
+    var newEnd = dragStartZoom.end + shift;
+    if (newStart < 0) { newEnd -= newStart; newStart = 0; }
+    if (newEnd > 1) { newStart -= (newEnd - 1); newEnd = 1; }
+    historyZoom = { start: Math.max(0, newStart), end: Math.min(1, newEnd) };
+    _renderHistoryZoomed();
+  });
+
+  document.addEventListener("mouseup", function() {
+    if (isDragging) {
+      isDragging = false;
+      newOverlay.style.cursor = "crosshair";
+    }
+  });
+
+  newOverlay.addEventListener("mouseleave", function() {
+    if (isDragging) {
+      isDragging = false;
+      newOverlay.style.cursor = "crosshair";
+    }
+  });
+
   newOverlay.onclick = function(e) {
     var rect2 = canvas.getBoundingClientRect();
     showClickValues(canvas, e.clientX - rect2.left, { rangeSeconds: parseInt(_historyRangeSeconds, 10) || 86400 });
@@ -140,6 +196,13 @@ function _setupHistoryZoom(canvas, fullData) {
         { label: "上傳", color: "#f59e0b", key: "txBps" },
       ], clippedData, { rangeSeconds: parseInt(_historyRangeSeconds, 10) || 86400 });
 
+      // Update click overlay state for zoomed data
+      canvas.__clickSeries = [
+        { label: "下載", color: "#0ea5e9", key: "rxBps" },
+        { label: "上傳", color: "#f59e0b", key: "txBps" },
+      ];
+      canvas.__clickData = clippedData;
+
       // Update stats with zoom info
       var maxRx2 = 0, maxTx2 = 0;
       for (var i = 0; i < clippedData.length; i++) {
@@ -151,10 +214,61 @@ function _setupHistoryZoom(canvas, fullData) {
   }, { passive: false });
 
   // Double-click to reset zoom
-  newOverlay.addEventListener("dblclick", function() {
+  newOverlay.addEventListener("dblclick", function(e) {
+    e.preventDefault();
     historyZoom = { start: 0, end: 1 };
     loadHistory();
   });
+
+  // Expose render function for drag
+  window._renderHistoryZoomed = _renderHistoryZoomed;
+}
+
+function _renderHistoryZoomed() {
+  var canvas = document.getElementById("history-chart");
+  if (!canvas) return;
+  var fullData = canvas.__clickData || [];
+  if (!fullData || fullData.length < 10) return;
+  var dataLen = fullData.length;
+  var startPt = Math.floor(historyZoom.start * dataLen);
+  var endPt = Math.ceil(historyZoom.end * dataLen);
+  var clippedData = fullData.slice(startPt, endPt);
+  var pad = { left: 72, right: 20, top: 28, bottom: 32 };
+  var rect = canvas.parentElement.getBoundingClientRect();
+  var width = rect.width;
+  var height = 240;
+  var ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = "#1a1f2e";
+  ctx.fillRect(0, 0, width, height);
+  ctx.fillStyle = "#718096";
+  ctx.font = "14px Inter, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("載入中…", width / 2, height / 2);
+
+  try {
+    var series = canvas.__clickSeries || [
+      { label: "下載", color: "#0ea5e9", key: "rxBps" },
+      { label: "上傳", color: "#f59e0b", key: "txBps" },
+    ];
+    drawLineChart("history-chart", series, clippedData, { rangeSeconds: parseInt(_historyRangeSeconds, 10) || 86400 });
+
+    canvas.__clickSeries = series;
+    canvas.__clickData = clippedData;
+
+    var maxRx = 0, maxTx = 0;
+    for (var i = 0; i < clippedData.length; i++) {
+      if (clippedData[i].rxBps > maxRx) maxRx = clippedData[i].rxBps;
+      if (clippedData[i].txBps > maxTx) maxTx = clippedData[i].txBps;
+    }
+    updateHistoryStats(document.getElementById("history-stats"), maxRx, maxTx, startPt, endPt, dataLen, true);
+  } catch (e) {
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = "#f56565";
+    ctx.font = "14px Inter, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("載入失敗: " + e.message, width / 2, height / 2);
+  }
 }
 
 // Setup auto-load and range change listener
