@@ -178,3 +178,28 @@ function drawLineChart(canvasId, series, data) {
     legendX += ctx.measureText(leg.label).width + 36;
   }
 }
+
+// ---- Connection status indicator ----
+
+function setConnectionStatus(color, text) {
+  var indicator = document.getElementById("status-indicator");
+  if (!indicator) return;
+  var led = indicator.querySelector(".led");
+  var label = indicator.querySelector(".status-text");
+  led.className = "led " + color;
+  label.textContent = text.toUpperCase();
+}
+
+// ---- Tab switching ----
+
+var currentTab = "live";
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById("tab-live").classList.toggle("active", tab === "live");
+  document.getElementById("tab-history").classList.toggle("active", tab === "history");
+  document.getElementById("panel-live").style.display = tab === "live" ? "" : "none";
+  document.getElementById("panel-live-lan").style.display = tab === "live" ? "" : "none";
+  document.getElementById("panel-history").style.display = tab === "history" ? "" : "none";
+}
+window._switchTab = switchTab;
