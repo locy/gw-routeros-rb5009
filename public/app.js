@@ -425,8 +425,27 @@ async function loadHistory() {
       ctx.font = "14px Inter, sans-serif";
       ctx.textAlign = "center";
       ctx.fillText("該區間尚無資料", width / 2, height / 2);
+      document.getElementById("history-stats").innerHTML = "";
       return;
     }
+
+    // Compute max values
+    var maxRx = 0, maxTx = 0;
+    for (var i = 0; i < data.length; i++) {
+      if (data[i].rxBps > maxRx) maxRx = data[i].rxBps;
+      if (data[i].txBps > maxTx) maxTx = data[i].txBps;
+    }
+    function fmtBps(b) {
+      if (b >= 1000000000) return (b / 1000000000).toFixed(2) + " Gbps";
+      if (b >= 1000000) return (b / 1000000).toFixed(1) + " Mbps";
+      if (b >= 1000) return (b / 1000).toFixed(0) + " Kbps";
+      return b + " bps";
+    }
+    document.getElementById("history-stats").innerHTML =
+      '<span style="color:#0ea5e9">最大下載: ' + fmtBps(maxRx) + '</span>' +
+      '<span style="color:#f59e0b">最大上傳: ' + fmtBps(maxTx) + '</span>' +
+      '<span style="color:#718096">資料點: ' + data.length + ' (每5秒一筆)</span>';
+
     drawLineChart("history-chart", [
       { label: "下載", color: "#0ea5e9", key: "rxBps" },
       { label: "上傳", color: "#f59e0b", key: "txBps" },
