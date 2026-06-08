@@ -52,6 +52,7 @@ function connectWS() {
     try {
       var msg = JSON.parse(ev.data);
       if (msg.type === "sample") {
+        console.log("[WS] received:", msg.payload.interface, "rx:", msg.payload.rxBps);
         var sample = msg.payload;
         if (!samples.has(sample.interface)) {
           samples.set(sample.interface, []);
