@@ -171,6 +171,8 @@ function drawLineChart(canvasId, series, data) {
   // Round up to nice scale
   var exp = Math.pow(10, Math.ceil(Math.log10(globalMax)) - 1);
   globalMax = exp;
+  console.log("[chart] " + canvasId + " len=" + data.length, "globalMax=" + globalMax, "chartW=" + chartW + " chartH=" + chartH);
+  console.log("[chart] " + canvasId + " data[0][rxBps]=" + data[0].rxBps, "data[-1][rxBps]=" + data[data.length-1].rxBps);
 
   // ---- Grid lines ----
   ctx.strokeStyle = "#1e293b";
