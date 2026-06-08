@@ -138,6 +138,27 @@ export class DatabaseWrapper {
     }));
   }
 
+  getSamplesByDateRange(iface: string, since: Date): TrafficSample[] {
+    const rows = queryAll(
+      this.db,
+      `SELECT * FROM traffic_samples
+       WHERE interface = ? AND timestamp >= ? AND valid = 1
+       ORDER BY timestamp ASC`,
+      [iface, since.toISOString()],
+    );
+
+    return rows.map((row) => ({
+      interface: String(row.interface),
+      timestamp: new Date(String(row.timestamp)),
+      rxBps: Number(row.rx_bps),
+      txBps: Number(row.tx_bps),
+      rxBytes: Number(row.rx_bytes),
+      txBytes: Number(row.tx_bytes),
+      linkUp: Number(row.link_up) === 1,
+      valid: Number(row.valid) === 1,
+    }));
+  }
+
   insertEvent(type: string, iface: string | null, message: string): void {
     this.db.run(
       "INSERT INTO events (timestamp, type, interface, message) VALUES (?, ?, ?, ?)",

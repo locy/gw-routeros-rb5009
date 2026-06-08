@@ -360,6 +360,67 @@ function drawLineChart(canvasId, series, data) {
   }
 }
 
+// ---- Tab switching ----
+
+var currentTab = "live";
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById("tab-live").classList.toggle("active", tab === "live");
+  document.getElementById("tab-history").classList.toggle("active", tab === "history");
+  document.getElementById("panel-live").style.display = tab === "live" ? "" : "none";
+  document.getElementById("panel-live-lan").style.display = tab === "live" ? "" : "none";
+  document.getElementById("panel-history").style.display = tab === "history" ? "" : "none";
+}
+
+document.getElementById("tab-live").addEventListener("click", function() { switchTab("live"); });
+document.getElementById("tab-history").addEventListener("click", function() { switchTab("history"); });
+
+// ---- History chart ----
+
+async function loadHistory() {
+  var iface = document.getElementById("history-iface").value;
+  var range = parseInt(document.getElementById("history-range").value);
+  var canvas = document.getElementById("history-chart");
+  if (!canvas) return;
+
+  // Draw loading state
+  var ctx = canvas.getContext("2d");
+  var rect = canvas.parentElement.getBoundingClientRect();
+  var width = rect.width;
+  var height = 240;
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = "#718096";
+  ctx.font = "14px Inter, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("載入中…", width / 2, height / 2);
+
+  try {
+    var resp = await fetch("/api/history/" + encodeURIComponent(iface) + "?range=" + range);
+    var data = await resp.json();
+    if (!data || data.length < 2) {
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "#718096";
+      ctx.font = "14px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("該區間尚無資料", width / 2, height / 2);
+      return;
+    }
+    drawLineChart("history-chart", [
+      { label: "下載", color: "#0ea5e9", key: "rxBps" },
+      { label: "上傳", color: "#f59e0b", key: "txBps" },
+    ], data);
+  } catch (e) {
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = "#f56565";
+    ctx.font = "14px Inter, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("載入失敗: " + e.message, width / 2, height / 2);
+  }
+}
+
+document.getElementById("btn-load-history").addEventListener("click", loadHistory);
+
 // ---- Init ----
 
 connectWS();

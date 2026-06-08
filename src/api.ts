@@ -116,6 +116,14 @@ export function createHandler(
       const iface = decodeURIComponent(
         url.pathname.replace("/api/history/", ""),
       );
+      const range = url.searchParams.get("range");
+      if (range) {
+        const seconds = parseInt(range, 10);
+        if (seconds > 0) {
+          const cutoff = new Date(Date.now() - seconds * 1000);
+          return json(db.getSamplesByDateRange(iface, cutoff));
+        }
+      }
       return json(db.getRecentSamples(iface, 180));
     }
     if (url.pathname === "/api/events") {

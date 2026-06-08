@@ -14,8 +14,8 @@
           <p>RouterOS gateway live traffic and history</p>
         </div>
         <nav>
-          <button>Live</button>
-          <button>History</button>
+          <button id="tab-live" class="tab-btn active">Live</button>
+          <button id="tab-history" class="tab-btn">History</button>
         </nav>
         <div class="status-indicator" id="status-indicator">
           <span class="led"></span>
@@ -32,11 +32,27 @@
           <strong id="lan-now">等待資料</strong>
         </section>
 
-        <section class="panel chart-panel">
+        <section class="panel chart-panel" id="panel-live">
           <h2>WAN 即時流量</h2><canvas id="live-chart" width="960" height="240"></canvas>
         </section>
-        <section class="panel chart-panel">
+        <section class="panel chart-panel" id="panel-live-lan">
           <h2>LAN 即時流量</h2><canvas id="live-chart-lan" width="960" height="240"></canvas>
+        </section>
+        <section class="panel chart-panel" id="panel-history" style="display:none">
+          <h2>歷史流量</h2>
+          <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
+            <select id="history-iface" style="padding:4px 8px;background:#1a202c;color:#e2e8f0;border:1px solid #2d3748;border-radius:4px">
+              <option value="bridge-WAN">bridge-WAN</option>
+              <option value="bridge-LAN">bridge-LAN</option>
+            </select>
+            <select id="history-range" style="padding:4px 8px;background:#1a202c;color:#e2e8f0;border:1px solid #2d3748;border-radius:4px">
+              <option value="3600">1 小時</option>
+              <option value="86400" selected>24 小時</option>
+              <option value="604800">7 天</option>
+            </select>
+            <button id="btn-load-history" style="padding:4px 12px;background:#1a202c;color:#e2e8f0;border:1px solid #2d3748;border-radius:4px;cursor:pointer">載入</button>
+          </div>
+          <canvas id="history-chart" width="960" height="240"></canvas>
         </section>
         <section class="panel">
           <h2>Top IP / MAC</h2>
