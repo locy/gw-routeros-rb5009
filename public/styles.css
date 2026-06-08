@@ -1,0 +1,71 @@
+body {
+  margin: 0;
+  background: #f6f7f9;
+  color: #17202a;
+  font-family: Inter, "Noto Sans TC", system-ui, sans-serif;
+}
+
+button {
+  border: 1px solid #c9d1dc;
+  background: #fff;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.app-shell {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.topbar h1 {
+  font-size: 24px;
+  margin: 0;
+}
+
+.topbar p {
+  margin: 4px 0 0;
+  color: #5f6b7a;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric-card,
+.panel {
+  background: #fff;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.metric-card span {
+  display: block;
+  color: #5f6b7a;
+  margin-bottom: 10px;
+}
+
+.metric-card strong {
+  font-size: 26px;
+}
+
+.chart-panel {
+  grid-column: span 3;
+}
+
+canvas {
+  width: 100%;
+  border: 1px dashed #c7d0dd;
+  border-radius: 8px;
+}

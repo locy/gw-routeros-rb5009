@@ -1,0 +1,13 @@
+services:
+  monitor:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - monitor-data:/data
+    restart: unless-stopped
+
+volumes:
+  monitor-data:

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>RB5009 Traffic Monitor</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>RB5009 Traffic Monitor</h1>
+          <p>RouterOS gateway live traffic and history</p>
+        </div>
+        <nav>
+          <button>Live</button>
+          <button>History</button>
+        </nav>
+      </header>
+      <section class="dashboard-grid">
+        <section class="metric-card">
+          <span>WAN 即時</span><strong id="wan-now">等待資料</strong>
+        </section>
+        <section class="metric-card">
+          <span>LAN 即時</span><strong id="lan-now">等待資料</strong>
+        </section>
+        <section class="metric-card">
+          <span>資料延遲</span><strong id="stale-state">尚未連線</strong>
+        </section>
+        <section class="panel chart-panel">
+          <h2>即時流量</h2><canvas
+            id="live-chart"
+            width="960"
+            height="240"
+          ></canvas>
+        </section>
+        <section class="panel">
+          <h2>Top IP / MAC</h2>
+          <p id="top-devices">Traffic Flow 來源尚未啟用。</p>
+        </section>
+        <section class="panel">
+          <h2>最近事件</h2>
+          <ul id="events"></ul>
+        </section>
+      </section>
+    </main>
+    <script type="module" src="/app.ts"></script>
+  </body>
+</html>
