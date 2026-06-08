@@ -406,7 +406,7 @@ function drawLineChart(canvasId, series, data) {
     canvas.__clickOverlay = overlayDiv;
   }
   // Always position overlay exactly over the chart area
-  if (canvas.__clickOverlay && canvas.__clickHeight) {
+  if (canvas.__clickOverlay) {
     var panelRect = canvas.parentElement.getBoundingClientRect();
     var canvasRect = canvas.getBoundingClientRect();
     var overlayTop = canvasRect.top - panelRect.top;
@@ -581,6 +581,25 @@ function switchTab(tab) {
 document.getElementById("tab-live").addEventListener("click", function() { switchTab("live"); });
 document.getElementById("tab-history").addEventListener("click", function() { switchTab("history"); });
 
+// Auto-load history when range selection changes
+var historyRangeEl = document.getElementById("history-range");
+if (historyRangeEl) {
+  historyRangeEl.addEventListener("change", function() {
+    loadHistory();
+  });
+}
+
+// Auto-load default 24h on first history tab switch
+var _historyLoaded = false;
+var _origSwitchTab = switchTab;
+switchTab = function(tab) {
+  _origSwitchTab(tab);
+  if (tab === "history" && !_historyLoaded) {
+    _historyLoaded = true;
+    setTimeout(function() { loadHistory(); }, 50);
+  }
+};
+
 // ---- History chart ----
 
 // Zoom state for history chart: [startIdx, endIdx] in data array (0..1)
@@ -640,9 +659,22 @@ async function loadHistory() {
       { label: "上傳", color: "#f59e0b", key: "txBps" },
     ], data);
 
-    // Wheel zoom on history chart
+    // Wheel zoom on history chart overlay
     var hCanvas = document.getElementById("history-chart");
-    hCanvas.addEventListener("wheel", function(e) {
+    var hOverlay = hCanvas.__clickOverlay;
+    if (!hOverlay) {
+      hOverlay = document.createElement("div");
+      hOverlay.style.cssText = "position:absolute;left:0;width:100%;cursor:crosshair;z-index:1;background:transparent";
+      hCanvas.parentElement.style.position = "relative";
+      hCanvas.parentElement.insertBefore(hOverlay, hCanvas.nextSibling);
+      hCanvas.__clickOverlay = hOverlay;
+    }
+    // Ensure overlay is positioned over canvas
+    var hPanelRect = hCanvas.parentElement.getBoundingClientRect();
+    var hCanvasRect = hCanvas.getBoundingClientRect();
+    hOverlay.style.top = (hCanvasRect.top - hPanelRect.top) + "px";
+    hOverlay.style.height = (hCanvasRect.height) + "px";
+    hOverlay.addEventListener("wheel", function(e) {
       e.preventDefault();
       var rect = hCanvas.getBoundingClientRect();
       var mouseX = e.clientX - rect.left;
@@ -687,7 +719,7 @@ async function loadHistory() {
     }, { passive: false });
 
     // Double-click to reset zoom
-    hCanvas.addEventListener("dblclick", function() {
+    hOverlay.addEventListener("dblclick", function() {
       historyZoom = { start: 0, end: 1 };
       loadHistory();
     });
