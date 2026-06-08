@@ -149,7 +149,7 @@ function _setupHistoryZoom(canvas, fullData) {
 }
 
 // Setup auto-load and range change listener
-function initHistoryChart() {
+window.initHistoryChart = function() {
   var historyRangeEl = document.getElementById("history-range");
   if (historyRangeEl) {
     historyRangeEl.addEventListener("change", function() {

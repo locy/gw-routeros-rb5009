@@ -86,9 +86,9 @@ window._switchTab = switchTab;
 
 // ---- Init ----
 
-connectWS();
+window.connectWS();
 startPeriodicFetches();
-initHistoryChart();
+window.initHistoryChart();
 
 // Re-apply tab click handlers AFTER initHistoryChart to include the wrapper
 (function() {
