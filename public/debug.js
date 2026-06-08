@@ -41,22 +41,25 @@
     `;
     document.body.appendChild(panel);
 
-    // Panel controls
-    $("#debug-level").addEventListener("change", function() {
+    var dbgLevel = document.getElementById("debug-level");
+    if (dbgLevel) dbgLevel.addEventListener("change", function() {
       logLevel = this.value;
       renderLogs();
     });
-    $("#debug-clear").addEventListener("click", function() {
+    var dbgClear = document.getElementById("debug-clear");
+    if (dbgClear) dbgClear.addEventListener("click", function() {
       debugLog = [];
       renderLogs();
     });
-    $("#debug-collect").addEventListener("click", function() {
+    var dbgCollect = document.getElementById("debug-collect");
+    if (dbgCollect) dbgCollect.addEventListener("click", function() {
       if (window.collectState) {
         var snap = window.collectState();
         addLog("info", "State snapshot collected: " + Object.keys(snap.dom).length + " keys");
       }
     });
-    $("#debug-send").addEventListener("click", function() {
+    var dbgSend = document.getElementById("debug-send");
+    if (dbgSend) dbgSend.addEventListener("click", function() {
       if (window.collectState) {
         var snap = window.collectState();
         fetch("/api/debug/snapshot", {
@@ -70,10 +73,12 @@
         });
       }
     });
-    $("#debug-toggle").addEventListener("click", function() {
+    var dbgToggle = document.getElementById("debug-toggle");
+    if (dbgToggle) dbgToggle.addEventListener("click", function() {
       panelOpen = !panelOpen;
       this.textContent = panelOpen ? "▲" : "▼";
-      $("#debug-log").style.display = panelOpen ? "" : "none";
+      var dbgLog = document.getElementById("debug-log");
+      if (dbgLog) dbgLog.style.display = panelOpen ? "" : "none";
     });
   }
 
@@ -91,7 +96,7 @@
   }
 
   function renderLogs() {
-    var logEl = $("#debug-log");
+    var logEl = document.getElementById("debug-log");
     if (!logEl) return;
     var filtered = debugLog.filter(function(e) {
       if (logLevel === "all") return true;

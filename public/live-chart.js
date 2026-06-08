@@ -23,11 +23,7 @@ function colorForBps(bps) {
   return "#a78bfa";
 }
 
-function updateLiveDisplay() {
-  var wanEl = document.getElementById("wan-now");
-  var lanEl = document.getElementById("lan-now");
-  var wanK = findInterfaceKey("wan");
-  var lanK = findInterfaceKey("lan");
+window.updateLiveDisplay = function() {
 
   if (wanK) {
     var wanArr = samples.get(wanK);
@@ -54,7 +50,7 @@ function updateLiveDisplay() {
   }
 }
 
-function drawCharts() {
+window.drawCharts = function() {
   var wanK = findInterfaceKey("wan");
   var lanK = findInterfaceKey("lan");
   var wanData = samples.get(wanK) || [];
@@ -81,7 +77,7 @@ function drawCharts() {
 
 // ---- WebSocket connection ----
 
-function connectWS() {
+window.connectWS = function() {
   var proto = location.protocol === "https:" ? "wss:" : "ws:";
   var ws = new WebSocket(proto + "//" + location.host + "/ws");
 
