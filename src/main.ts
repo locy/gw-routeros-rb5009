@@ -3,10 +3,29 @@ import { createHandler, wsHub } from "./api.ts";
 import { Collector } from "./collector.ts";
 import { loadSettings } from "./config.ts";
 import { DatabaseWrapper } from "./db.ts";
-import { MockRouterOSClient } from "./routeros.ts";
+import { MockRouterOSClient, RouterOSClient, parseInterfaceRows } from "./routeros.ts";
+import { RouterOSAPI } from "routeros";
 import { runRetention } from "./retention.ts";
 import { generateReadonlyMonitorScript } from "./routeros_scripts.ts";
 import { WebSocketServer } from "ws";
+
+async function createRouterOSClient(settings: Awaited<ReturnType<typeof loadSettings>>): Promise<RouterOSClient> {
+  const rosClient = new RouterOSAPI({
+    host: settings.routerosHost,
+    port: settings.routerosPort,
+    user: settings.routerosUser,
+    password: settings.routerosPassword,
+    useTLS: false,
+  });
+  await rosClient.connect();
+  console.log("[RouterOS] Connected to", settings.routerosHost);
+  return {
+    async readInterfaceCounters() {
+      const rows = await rosClient.write("/interface/print", [[".proplist", "name,running,rx-byte,tx-byte,rx-error,tx-error"]]);
+      return parseInterfaceRows(rows as import("./routeros").RouterOSRow[], [settings.wanInterface, settings.lanInterface]);
+    },
+  };
+}
 
 const command = Deno.args[0] ?? "serve";
 const settings = await loadSettings();
@@ -57,11 +76,10 @@ if (command === "routeros-script") {
     });
 
     // Start background collector loop
-    const collector = new Collector(
-      new MockRouterOSClient(settings.wanInterface, settings.lanInterface),
-      db,
-      [settings.wanInterface, settings.lanInterface],
-    );
+    const client: RouterOSClient = settings.mockMode
+      ? new MockRouterOSClient(settings.wanInterface, settings.lanInterface)
+      : await createRouterOSClient(settings);
+    const collector = new Collector(client, db, [settings.wanInterface, settings.lanInterface]);
     console.log("Collector started (polling every", settings.pollIntervalSeconds, "s)");
     const poll = async () => {
       try {
@@ -76,11 +94,10 @@ if (command === "routeros-script") {
     // Then interval
     setInterval(poll, settings.pollIntervalSeconds * 1000);
   } else if (command === "collector-once") {
-    const collector = new Collector(
-      new MockRouterOSClient(settings.wanInterface, settings.lanInterface),
-      db,
-      [settings.wanInterface, settings.lanInterface],
-    );
+    const c: RouterOSClient = settings.mockMode
+      ? new MockRouterOSClient(settings.wanInterface, settings.lanInterface)
+      : await createRouterOSClient(settings);
+    const collector = new Collector(c, db, [settings.wanInterface, settings.lanInterface]);
     // Run 2 polls: first establishes baseline, second computes rate
     await collector.pollOnce();
     await new Promise((r) => setTimeout(r, 2000));

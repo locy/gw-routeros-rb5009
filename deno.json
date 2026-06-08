@@ -1,7 +1,7 @@
 {
   "tasks": {
     "dev": "deno run --allow-net --allow-read --allow-write --allow-env src/main.ts serve",
-    "serve": "deno run --allow-net --allow-read --allow-write --allow-env src/main.ts serve",
+    "serve": "deno run --allow-net --allow-read --allow-write --allow-env --allow-ffi src/main.ts serve",
     "collector-once": "deno run --allow-net --allow-read --allow-write --allow-env src/main.ts collector-once",
     "retention": "deno run --allow-read --allow-write --allow-env src/main.ts retention",
     "routeros-script": "deno run --allow-read --allow-write src/main.ts routeros-script",
@@ -15,6 +15,7 @@
     "@std/path": "jsr:@std/path@1",
     "@db/sqlite": "jsr:@db/sqlite@0.12",
     "@std/ws": "jsr:@std/ws@1",
+    "routeros": "npm:routeros@^1.6.12",
     "ws": "npm:ws@^8.21.0"
   },
   "npm": {
