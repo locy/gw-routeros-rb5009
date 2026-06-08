@@ -1,5 +1,5 @@
 import { serveDir } from "@std/http/file-server";
-import type { DatabaseWrapper } from "./db.ts";
+import type { DatabaseWrapper, TrafficSample } from "./db.ts";
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -40,4 +40,67 @@ export function createHandler(
     }
     return serveDir(request, { fsRoot: publicDir, urlRoot: "" });
   };
+}
+
+// ---- WebSocket broadcast hub ----
+
+// ws package ready state constants
+const WS_READY_OPEN = 1;
+
+interface WSClient {
+  send(data: string | Uint8Array): void;
+  close(): void;
+  readyState: number;
+}
+
+class BroadcastHub implements WSClient {
+  private clients = new Set<WSClient>();
+
+  add(client: WSClient): void {
+    this.clients.add(client);
+  }
+
+  remove(client: WSClient): void {
+    this.clients.delete(client);
+  }
+
+  broadcast(data: unknown): void {
+    const msg = JSON.stringify(data);
+    for (const client of this.clients) {
+      if (client.readyState === WS_READY_OPEN) {
+        try { client.send(msg); } catch { /* closed */ }
+      }
+    }
+  }
+
+  get count(): number {
+    return this.clients.size;
+  }
+
+  // Serve as a WSClient wrapper itself
+  send(data: string | Uint8Array): void {
+    for (const client of this.clients) {
+      if (client.readyState === WS_READY_OPEN) {
+        try { client.send(data); } catch { /* closed */ }
+      }
+    }
+  }
+
+  close(): void {
+    for (const client of this.clients) {
+      try { client.close(); } catch { /* */ }
+    }
+    this.clients.clear();
+  }
+
+  get readyState(): number {
+    return WS_READY_OPEN;
+  }
+}
+
+export const wsHub = new BroadcastHub();
+
+// Called by collector when new data arrives
+export function pushLatestSample(sample: TrafficSample): void {
+  wsHub.broadcast({ type: "sample", payload: sample });
 }

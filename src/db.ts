@@ -9,6 +9,17 @@ export type EventRow = {
   message: string;
 };
 
+export type TrafficSample = {
+  interface: string;
+  timestamp: Date;
+  rxBps: number;
+  txBps: number;
+  rxBytes: number;
+  txBytes: number;
+  linkUp: boolean;
+  valid: boolean;
+};
+
 export type RollupRow = {
   bucket: string;
   interface: string;

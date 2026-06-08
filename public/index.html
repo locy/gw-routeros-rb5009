@@ -26,11 +26,18 @@
           <span>LAN 即時</span><strong id="lan-now">等待資料</strong>
         </section>
         <section class="metric-card">
-          <span>資料延遲</span><strong id="stale-state">尚未連線</strong>
+          <span>連線狀態</span><strong id="stale-state">尚未連線</strong>
         </section>
         <section class="panel chart-panel">
-          <h2>即時流量</h2><canvas
+          <h2>WAN 即時流量</h2><canvas
             id="live-chart"
+            width="960"
+            height="240"
+          ></canvas>
+        </section>
+        <section class="panel chart-panel">
+          <h2>LAN 即時流量</h2><canvas
+            id="live-chart-lan"
             width="960"
             height="240"
           ></canvas>

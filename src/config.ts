@@ -1,3 +1,5 @@
+import { load } from "jsr:@std/dotenv";
+
 export type Settings = {
   routerosHost: string;
   routerosUser: string;
@@ -33,8 +35,15 @@ function integer(env: EnvSource, key: string, fallback: number): number {
 }
 
 export async function loadSettings(
-  env: EnvSource = Deno.env.toObject(),
+  env: EnvSource | undefined = undefined,
 ): Promise<Settings> {
+  if (env === undefined) {
+    // Try to load from .env file first, then fall back to process env
+    const dotEnv = await load({ parse: true, env: [] }).catch(
+      () => ({}),
+    );
+    env = { ...Deno.env.toObject(), ...dotEnv };
+  }
   return {
     routerosHost: required(env, "ROUTEROS_HOST"),
     routerosUser: required(env, "ROUTEROS_USER"),

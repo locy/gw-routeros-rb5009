@@ -1,7 +1,8 @@
-import type { DatabaseWrapper } from "./db.ts";
+import type { DatabaseWrapper, TrafficSample } from "./db.ts";
 import type { InterfaceCounters } from "./models.ts";
 import type { RouterOSClient } from "./routeros.ts";
 import { calculateRate } from "./traffic.ts";
+import { pushLatestSample } from "./api.ts";
 
 export class Collector {
   private previous = new Map<string, InterfaceCounters>();
@@ -40,6 +41,7 @@ export class Collector {
       if (!previous) continue;
       const sample = calculateRate(previous, current);
       this.db.insertSample(sample);
+      pushLatestSample(sample as TrafficSample);
       if (sample.eventType) {
         this.db.insertEvent(
           sample.eventType,
