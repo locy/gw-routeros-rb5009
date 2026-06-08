@@ -113,10 +113,11 @@ button:hover {
   font-size: 14px;
 }
 
-.metric-row strong {
+.metric-row strong,
+.metric-row strong span {
   font-size: 26px;
   line-height: 1.2;
-  color: #e2e8f0;
+  color: inherit;
 }
 
 .metric-card,
