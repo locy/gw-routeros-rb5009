@@ -207,7 +207,7 @@ function drawLineChart(canvasId, series, data) {
   var displayRange = displayMax - displayMin || 1;
 
   // ---- Grid lines ----
-  ctx.strokeStyle = "#1e293b";
+  ctx.strokeStyle = "#2d3748";
   ctx.lineWidth = 1;
   ctx.setLineDash([4, 4]);
   for (var g = 0; g <= 4; g++) {

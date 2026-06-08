@@ -1,15 +1,20 @@
 body {
   margin: 0;
-  background: #f6f7f9;
-  color: #17202a;
+  background: #0b0f19;
+  color: #e2e8f0;
   font-family: Inter, "Noto Sans TC", system-ui, sans-serif;
 }
 
 button {
-  border: 1px solid #c9d1dc;
-  background: #fff;
+  border: 1px solid #2d3748;
+  background: #1a202c;
+  color: #e2e8f0;
   border-radius: 6px;
   padding: 8px 12px;
+  cursor: pointer;
+}
+button:hover {
+  background: #2d3748;
 }
 
 .app-shell {
@@ -42,12 +47,12 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #fff;
-  border: 1px solid #d8dee8;
+  background: #1a202c;
+  border: 1px solid #2d3748;
   border-radius: 8px;
   padding: 6px 14px;
   font-size: 13px;
-  color: #5f6b7a;
+  color: #a0aec0;
   white-space: nowrap;
 }
 
@@ -55,24 +60,24 @@ button {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #9ca3af;
+  background: #4a5568;
   flex-shrink: 0;
   transition: background 0.3s;
 }
 
 .status-indicator .led.green {
-  background: #10b981;
-  box-shadow: 0 0 6px #10b98166;
+  background: #48bb78;
+  box-shadow: 0 0 6px #48bb7866;
 }
 
 .status-indicator .led.yellow {
-  background: #f59e0b;
-  box-shadow: 0 0 6px #f59e0b66;
+  background: #ecc94b;
+  box-shadow: 0 0 6px #ecc94b66;
 }
 
 .status-indicator .led.red {
-  background: #ef4444;
-  box-shadow: 0 0 6px #ef444466;
+  background: #f56565;
+  box-shadow: 0 0 6px #f5656566;
 }
 
 .status-indicator .status-text {
@@ -82,11 +87,12 @@ button {
 .topbar h1 {
   font-size: 24px;
   margin: 0;
+  color: #e2e8f0;
 }
 
 .topbar p {
   margin: 4px 0 0;
-  color: #5f6b7a;
+  color: #718096;
 }
 
 .dashboard-grid {
@@ -97,21 +103,22 @@ button {
 
 .metric-card,
 .panel {
-  background: #fff;
-  border: 1px solid #d8dee8;
+  background: #131720;
+  border: 1px solid #2d3748;
   border-radius: 8px;
   padding: 16px;
 }
 
 .metric-card span {
   display: block;
-  color: #5f6b7a;
+  color: #718096;
   margin-bottom: 10px;
 }
 
 .metric-card strong {
   font-size: 22px;
   line-height: 1.2;
+  color: #e2e8f0;
 }
 
 .chart-panel {
@@ -128,7 +135,7 @@ canvas {
 .panel h2 {
   font-size: 16px;
   margin: 0 0 12px;
-  color: #374151;
+  color: #e2e8f0;
 }
 
 #events {
@@ -140,11 +147,11 @@ canvas {
 #events li {
   padding: 4px 0;
   font-size: 13px;
-  color: #374151;
-  border-bottom: 1px solid #f3f4f6;
+  color: #a0aec0;
+  border-bottom: 1px solid #1e293b;
 }
 
 #top-devices {
   font-size: 14px;
-  color: #6b7280;
+  color: #a0aec0;
 }
