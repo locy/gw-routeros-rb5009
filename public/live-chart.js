@@ -5,6 +5,8 @@ var wanKey = null;
 var lanKey = null;
 var wanK = null;
 var lanK = null;
+var wanEl = null;
+var lanEl = null;
 
 function findInterfaceKey(role) {
   if (role === "wan" && wanKey) return wanKey;

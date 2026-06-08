@@ -90,6 +90,9 @@ function waitForInit() {
   if (typeof window.connectWS === "function") {
     // Ensure all scripts (including extensions) have loaded
     setTimeout(function() {
+      // Initialize DOM element references for live-chart.js
+      wanEl = document.getElementById("wan-now");
+      lanEl = document.getElementById("lan-now");
       window.connectWS();
       startPeriodicFetches();
       window.initHistoryChart();
