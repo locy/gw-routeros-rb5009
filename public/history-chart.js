@@ -101,7 +101,7 @@ function _setupHistoryZoom(canvas, fullData) {
 
   // Re-attach click handler after cloneNode
   newOverlay.onclick = function(e) {
-    var rect2 = hCanvas ? hCanvas.getBoundingClientRect() : canvas.getBoundingClientRect();
+    var rect2 = canvas.getBoundingClientRect();
     showClickValues(canvas, e.clientX - rect2.left);
   };
 
