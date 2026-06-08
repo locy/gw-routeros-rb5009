@@ -11,7 +11,7 @@ function setConnectionStatus(color, text) {
   var led = indicator.querySelector(".led");
   var label = indicator.querySelector(".status-text");
   led.className = "led " + color;
-  label.textContent = text;
+  label.textContent = text.toUpperCase();
 }
 
 // ---- Color helpers ----
@@ -45,7 +45,7 @@ function connectWS() {
   var ws = new WebSocket(proto + "//" + location.host + "/ws");
 
   ws.onopen = function () {
-    setConnectionStatus("green", "即時連線已就緒");
+    setConnectionStatus("green", "online");
   };
 
   ws.onmessage = function (ev) {
@@ -72,7 +72,7 @@ function connectWS() {
   };
 
   ws.onclose = function () {
-    setConnectionStatus("yellow", "連線中斷，3 秒後重連…");
+    setConnectionStatus("yellow", "offline");
     setTimeout(connectWS, 3000);
   };
 }
