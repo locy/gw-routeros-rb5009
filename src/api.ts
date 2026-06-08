@@ -107,6 +107,54 @@ export function createHandler(
       }
       return json({ error: "no snapshot yet", timestamp: new Date().toISOString() });
     }
+    if (url.pathname === "/api/debug/check") {
+      // Comprehensive server-side diagnostic
+      const recentWan = db.getRecentSamples(wanInterface, 10);
+      const recentLan = db.getRecentSamples(lanInterface, 10);
+      const events = db.getRecentEvents(10);
+      const statusSnap = await json(new Response("")).json(); // trigger status endpoint
+      // Re-run status logic
+      const ipToMacMap = new Map<string, { mac?: string; hostname?: string }>();
+      const topByIp = new Map<string, { bytes: number; packets: number; mac?: string; hostname?: string }>();
+      if (rosClient) {
+        try {
+          const leases = await rosClient.readDhcpLeases();
+          for (const l of leases) {
+            ipToMacMap.set(l.activeAddress, { mac: l.activeMac, hostname: l.hostName });
+          }
+          const conns = await rosClient.readActiveConnections();
+          for (const c of conns) {
+            const isLocalSrc = /^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\./.test(c.srcIp);
+            const isExternalDst = !/^10\.|^172\.(1[6-9]|2[0-9]|3[01])\.|^192\.168\./.test(c.dstIp ?? "");
+            if (isLocalSrc && isExternalDst) {
+              const entry = topByIp.get(c.srcIp);
+              if (entry) {
+                entry.bytes += c.bytes; entry.packets += c.packets;
+              } else {
+                const ipInfo = ipToMacMap.get(c.srcIp);
+                topByIp.set(c.srcIp, { bytes: c.bytes, packets: c.packets, mac: ipInfo?.mac, hostname: ipInfo?.hostname });
+              }
+            }
+          }
+        } catch { /* ignore */ }
+      }
+      const items = Array.from(topByIp.entries())
+        .sort((a, b) => b[1].bytes - a[1].bytes).slice(0, 20)
+        .map(([ip, d]) => ({ ip, bytes: d.bytes, packets: d.packets, mac: d.mac ?? "-", hostname: d.hostname ?? "-" }));
+      return json({
+        timestamp: new Date().toISOString(),
+        server: {
+          wanRecentSamples: recentWan.length,
+          lanRecentSamples: recentLan.length,
+          wanLatest: recentWan[0] ? { rxBytes: recentWan[0].rxBytes, txBytes: recentWan[0].txBytes, timestamp: recentWan[0].timestamp } : null,
+          lanLatest: recentLan[0] ? { rxBytes: recentLan[0].rxBytes, txBytes: recentLan[0].txBytes, timestamp: recentLan[0].timestamp } : null,
+          eventsCount: events.length,
+          topDevices: items.length,
+          wsClients: wsHub.count,
+        },
+        browserSnapshot: (globalThis as Record<string, unknown>).__debugState || null,
+      });
+    }
     if (url.pathname === "/api/debug/history") {
       const cached = (globalThis as Record<string, unknown>).__debugHistory;
       if (cached && Array.isArray(cached)) {

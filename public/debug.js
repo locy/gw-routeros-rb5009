@@ -232,6 +232,22 @@
     });
 
     addLog("info", "=== Debug setup complete ===");
+
+    // Auto-send snapshot after 3s for AI debugging
+    setTimeout(function() {
+      if (window.collectState) {
+        var snap = window.collectState();
+        fetch("/api/debug/snapshot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(snap)
+        }).then(function(r) { return r.json(); }).then(function(data) {
+          addLog("info", "Auto-sent snapshot: " + data.total + " stored");
+        }).catch(function(err) {
+          addLog("error", "Auto-send failed: " + err.message);
+        });
+      }
+    }, 3000);
   }, 1000);
 
 })();
