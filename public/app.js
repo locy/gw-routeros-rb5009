@@ -732,7 +732,10 @@ async function loadHistory() {
   }
 }
 
-document.getElementById("btn-load-history").addEventListener("click", loadHistory);
+var btnLoadHistory = document.getElementById("btn-load-history");
+if (btnLoadHistory) {
+  btnLoadHistory.addEventListener("click", loadHistory);
+}
 
 // ---- Init ----
 
