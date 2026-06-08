@@ -81,11 +81,17 @@ window.connectWS = function() {
   var proto = location.protocol === "https:" ? "wss:" : "ws:";
   var ws = new WebSocket(proto + "//" + location.host + "/ws");
 
-  ws.onopen = function () {
-    setConnectionStatus("green", "online");
-  };
+  ws.addEventListener("open", function () {
+    console.log("[WS] onopen firing");
+    if (typeof setConnectionStatus === "function") {
+      setConnectionStatus("green", "online");
+      console.log("[WS] status set to online");
+    } else {
+      console.error("[WS] setConnectionStatus not found!");
+    }
+  });
 
-  ws.onmessage = function (ev) {
+  ws.addEventListener("message", function (ev) {
     try {
       var msg = JSON.parse(ev.data);
       if (msg.type === "sample") {
@@ -104,12 +110,16 @@ window.connectWS = function() {
     } catch (e) {
       // ignore
     }
-  };
+  });
 
-  ws.onclose = function () {
-    setConnectionStatus("yellow", "offline");
+  ws.addEventListener("close", function (ev) {
+    console.log("[WS] onclose code=" + ev.code + " reason=" + ev.reason);
+    if (typeof setConnectionStatus === "function") {
+      setConnectionStatus("yellow", "offline");
+      console.log("[WS] status set to offline");
+    }
     setTimeout(connectWS, 3000);
-  };
+  });
 }
 
 // ---- Click overlay to show point values ----

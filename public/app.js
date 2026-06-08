@@ -88,9 +88,12 @@ window._switchTab = switchTab;
 // Delay init until live-chart.js loads connectWS and drawCharts
 function waitForInit() {
   if (typeof window.connectWS === "function") {
-    window.connectWS();
-    startPeriodicFetches();
-    window.initHistoryChart();
+    // Ensure all scripts (including extensions) have loaded
+    setTimeout(function() {
+      window.connectWS();
+      startPeriodicFetches();
+      window.initHistoryChart();
+    }, 200);
     // Re-apply tab click handlers after init
     var liveEl = document.getElementById("tab-live");
     var histEl = document.getElementById("tab-history");

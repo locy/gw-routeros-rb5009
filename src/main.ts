@@ -106,13 +106,16 @@ if (command === "routeros-script") {
       console.log(`[WS] client connected from ${req.socket?.remoteAddress || "unknown"}`);
       wsHub.add(ws);
 (globalThis as Record<string, unknown>).__broadcastHub = wsHub;
-      ws.on("close", () => {
-        console.log(`[WS] client disconnected`);
+      ws.on("close", (code, reason) => {
+        console.log(`[WS] client disconnected code=${code} reason=${reason.toString()}`);
         wsHub.remove(ws);
       });
       ws.on("error", (e) => {
-        console.log(`[WS] client error`);
+        console.log(`[WS] client error: ${e.message}`);
         wsHub.remove(ws);
+      });
+      ws.on("message", (data) => {
+        console.log(`[WS] message received: ${data.toString().slice(0, 100)}`);
       });
     });
     server.listen(Number(settings.bindPort), settings.bindHost, () => {
