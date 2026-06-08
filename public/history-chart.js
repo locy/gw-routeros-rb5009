@@ -99,6 +99,12 @@ function _setupHistoryZoom(canvas, fullData) {
   overlay.parentNode.replaceChild(newOverlay, overlay);
   canvas.__clickOverlay = newOverlay;
 
+  // Re-attach click handler after cloneNode
+  newOverlay.onclick = function(e) {
+    var rect2 = hCanvas ? hCanvas.getBoundingClientRect() : canvas.getBoundingClientRect();
+    showClickValues(canvas, e.clientX - rect2.left);
+  };
+
   newOverlay.addEventListener("wheel", function(e) {
     e.preventDefault();
     var hCanvas = document.getElementById("history-chart");
