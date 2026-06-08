@@ -394,12 +394,19 @@ function drawLineChart(canvasId, series, data) {
   canvas.__clickParams = p;
 
   if (!canvas.__clickOverlay) {
-    var overlayDiv = document.createElement("div");
-    overlayDiv.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;cursor:pointer;z-index:2;background:transparent";
     canvas.parentElement.style.position = "relative";
-    canvas.parentElement.insertBefore(overlayDiv, canvas.nextSibling);
+    // Insert overlay BEFORE canvas so canvas is on top
+    var overlayDiv = document.createElement("div");
+    overlayDiv.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;cursor:pointer;z-index:1;background:transparent";
+    if (canvas.parentElement.firstChild) {
+      canvas.parentElement.insertBefore(overlayDiv, canvas.parentElement.firstChild);
+    } else {
+      canvas.parentElement.appendChild(overlayDiv);
+    }
     canvas.__clickOverlay = overlayDiv;
   }
+  canvas.style.position = "relative";
+  canvas.style.zIndex = "2";
   // Always set click handler
   canvas.__clickOverlay.onclick = function(e) {
     var r = canvas.getBoundingClientRect();
