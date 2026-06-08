@@ -52,15 +52,30 @@ async function fetchEvents() {
       return;
     }
     // Filter out old stale bridge missing_interface events
-    const isStale = data.every(e => e.type === 'missing_interface' && e.interface === 'bridge');
+    const staleTypes = ['missing_interface', 'poll_delay'];
+    const isStale = data.every(e => staleTypes.includes(e.type));
     if (isStale) {
-      ul.innerHTML = '<li style="color:#718096">介面已更新為 bridge-WAN / bridge-LAN，舊的 bridge 事件已過時</li>';
+      ul.innerHTML = '<li style="color:#718096">最近無異常事件</li>';
       return;
     }
     let html = "";
     for (const e of data) {
       const ts = e.timestamp ? e.timestamp.slice(11, 16) : "??:??";
-      html += '<li>' + ts + ' <span style="color:#a0aec0">[' + e.type + ']</span>' +
+      // Color code event types
+      var typeColor = "#a0aec0";
+      switch (e.type) {
+        case "link_down": case "traffic_spike_down":
+          typeColor = "#f56565"; break; // red
+        case "link_up": case "traffic_spike_up":
+          typeColor = "#48bb78"; break; // green
+        case "counter_reset": case "poll_delay":
+          typeColor = "#ed8936"; break; // orange
+        case "collector_error":
+          typeColor = "#e53e3e"; break; // dark red
+        case "missing_interface":
+          typeColor = "#a0aec0"; break; // gray
+      }
+      html += '<li>' + ts + ' <span style="color:' + typeColor + '">[' + e.type + ']</span>' +
         (e.interface ? ' <span style="color:#60a5fa">' + e.interface + '</span>' : '') +
         ' ' + (e.message || '') + '</li>';
     }

@@ -17,7 +17,7 @@ export type TrafficSample = {
   txBytes: number;
   linkUp: boolean;
   valid: boolean;
-  eventType?: "counter_reset" | "invalid_interval";
+  eventType?: "counter_reset" | "invalid_interval" | "link_down" | "link_up" | "traffic_spike_down" | "traffic_spike_up" | "poll_delay";
 };
 
 export type DeviceIdentity = {
