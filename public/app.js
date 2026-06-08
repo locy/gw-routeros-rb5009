@@ -401,9 +401,19 @@ function drawLineChart(canvasId, series, data) {
   if (!canvas.__clickOverlay) {
     canvas.parentElement.style.position = "relative";
     var overlayDiv = document.createElement("div");
-    overlayDiv.style.cssText = "position:absolute;top:100%;left:0;width:100%;height:0;cursor:crosshair;z-index:1;background:transparent";
+    overlayDiv.style.cssText = "position:absolute;left:0;width:100%;cursor:crosshair;z-index:1;background:transparent";
     canvas.parentElement.insertBefore(overlayDiv, canvas.nextSibling);
     canvas.__clickOverlay = overlayDiv;
+    // Set exact overlay dimensions to match chart area
+    var chartPanelH = canvas.parentElement.getBoundingClientRect().height;
+    overlayDiv.style.top = (28) + "px";
+    overlayDiv.style.height = (chartPanelH - 28 - 32) + "px";
+  }
+  // Always update overlay dimensions
+  if (canvas.__clickOverlay && canvas.__clickHeight) {
+    var chartPanelH2 = canvas.parentElement.getBoundingClientRect().height;
+    canvas.__clickOverlay.style.top = (28) + "px";
+    canvas.__clickOverlay.style.height = (chartPanelH2 - 28 - 32) + "px";
   }
   canvas.__clickOverlay.onclick = function(e) {
     var rect = canvas.getBoundingClientRect();
