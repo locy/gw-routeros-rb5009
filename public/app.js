@@ -256,6 +256,74 @@ function drawLineChart(canvasId, series, data) {
 
   ctx.scale(dpr, dpr);
 
+function drawHover(canvas, mouseX) {
+  var ctx = canvas.getContext("2d");
+  var data = canvas.__data;
+  var series = canvas.__series;
+  var p = canvas.__chartParams;
+  if (!data || !series || !p.pad) return;
+
+  // Find nearest data point
+  var xRatio = (mouseX - p.pad.left) / p.chartW;
+  var idx = Math.round(xRatio * (data.length - 1));
+  idx = Math.max(0, Math.min(data.length - 1, idx));
+
+  // Redraw
+  redrawCanvas(canvas);
+
+  var pointX = p.pad.left + (idx / (data.length - 1)) * p.chartW;
+
+  // Vertical crosshair
+  ctx.strokeStyle = "#4a5568";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(pointX, p.pad.top);
+  ctx.lineTo(pointX, p.pad.top + p.chartH);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Dots on each series at this point
+  for (var si = 0; si < series.length; si++) {
+    var v = Number(data[idx][series[si].key]) || 0;
+    var y = p.pad.top + p.chartH - ((v - p.yMin) / p.chartRange) * p.chartH;
+    y = Math.max(p.pad.top, Math.min(p.pad.top + p.chartH, y));
+    ctx.fillStyle = series[si].color;
+    ctx.beginPath();
+    ctx.arc(pointX, y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#0b0f19";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // Tooltip box
+  var hoverDiv = canvas.__hoverDiv;
+  var lines = [];
+  for (var si2 = 0; si2 < series.length; si2++) {
+    var val2 = Number(data[idx][series[si2].key]) || 0;
+    var bpsStr = formatBps(val2);
+    lines.push('<span style="color:' + series[si2].color + '">' + series[si2].label + ': ' + bpsStr + '</span>');
+  }
+  var t = data[idx].timestamp;
+  var timeStr = t ? t.toTimeString().slice(0, 8) : "";
+  lines.push('<span style="color:#718096">' + timeStr + '</span>');
+  hoverDiv.innerHTML = '<div style="position:absolute;left:' + (pointX + 12) + 'px;top:8px;background:rgba(11,15,25,0.95);border:1px solid #2d3748;border-radius:4px;padding:6px 10px;font-size:12px;line-height:1.6;white-space:nowrap;pointer-events:none;z-index:10">' + lines.join('<br>') + '</div>';
+
+  // Keep tooltip within bounds
+  var tipRect = hoverDiv.querySelector('div');
+  if (tipRect && pointX + 12 + tipRect.offsetWidth > canvas.getBoundingClientRect().width) {
+    tipRect.style.left = (pointX - tipRect.offsetWidth - 12) + 'px';
+  }
+}
+
+function redrawCanvas(canvas) {
+  var ctx = canvas.getContext("2d");
+  var w = canvas.width / (window.devicePixelRatio || 1);
+  var h = canvas.height / (window.devicePixelRatio || 1);
+  ctx.clearRect(0, 0, w, h);
+}
+
   // Clear entire canvas
   ctx.clearRect(0, 0, width, height);
 
@@ -296,6 +364,13 @@ function drawLineChart(canvasId, series, data) {
   var displayMax = Math.ceil(yMax / scaleExp) * scaleExp;
   var displayMin = Math.max(0, Math.floor(minVal / scaleExp) * scaleExp);
   var displayRange = displayMax - displayMin || 1;
+
+  // Store params for hover interaction
+  canvas.__chartParams = {
+    pad: pad, chartW: chartW, chartH: chartH,
+    yMin: yMin, yMax: yMax, chartRange: chartRange,
+    displayMin: displayMin, displayMax: displayMax, displayRange: displayRange,
+  };
 
   // ---- Grid lines ----
   ctx.strokeStyle = "#2d3748";
@@ -378,6 +453,29 @@ function drawLineChart(canvasId, series, data) {
     ctx.textBaseline = "top";
     ctx.fillText(leg.label, legendX + 16, 8);
     legendX += ctx.measureText(leg.label).width + 36;
+  }
+
+  // ---- Hover interaction ----
+  if (!canvas.__hoverDiv) {
+    var hoverDiv = document.createElement("div");
+    hoverDiv.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;z-index:5";
+    canvas.parentElement.style.position = "relative";
+    canvas.parentElement.insertBefore(hoverDiv, canvas.nextSibling);
+    hoverDiv.id = canvasId + "-hover";
+    canvas.__hoverDiv = hoverDiv;
+    canvas.__data = data;
+    canvas.__series = series;
+    canvas.__chartParams = canvas.__chartParams;
+
+    hoverDiv.addEventListener("mousemove", function(e) {
+      var r = canvas.getBoundingClientRect();
+      drawHover(canvas, e.clientX - r.left);
+    });
+    hoverDiv.addEventListener("mouseleave", function() {
+      // Redraw the chart to clear hover overlay
+      drawLineChart(canvasId, series, data);
+      hoverDiv.innerHTML = "";
+    });
   }
 }
 
