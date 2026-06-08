@@ -391,7 +391,7 @@ function drawLineChart(canvasId, series, data) {
   // Store state for click interaction
   canvas.__clickData = data;
   canvas.__clickSeries = series;
-  canvas.__clickParams = p;
+  canvas.__clickParams = canvas.__chartParams;
 
   if (!canvas.__clickOverlay) {
     canvas.parentElement.style.position = "relative";
