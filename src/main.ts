@@ -122,8 +122,8 @@ if (command === "routeros-script") {
     const client: RouterOSClient = settings.mockMode
       ? new MockRouterOSClient(settings.wanInterface, settings.lanInterface)
       : rosClient!;
-    const collector = new Collector(client, db, [settings.wanInterface, settings.lanInterface]);
-    console.log("Collector started (polling every", settings.pollIntervalSeconds, "s)");
+    const collector = new Collector(client, db, [settings.wanInterface, settings.lanInterface], settings.spikeThresholdBps);
+    console.log("Collector started (polling every", settings.pollIntervalSeconds, "s, spike threshold", settings.spikeThresholdBps, "bps)");
     const poll = async () => {
       try {
         await collector.pollOnce();
@@ -140,7 +140,7 @@ if (command === "routeros-script") {
     const c: RouterOSClient = settings.mockMode
       ? new MockRouterOSClient(settings.wanInterface, settings.lanInterface)
       : await createRouterOSClient(settings);
-    const collector = new Collector(c, db, [settings.wanInterface, settings.lanInterface]);
+    const collector = new Collector(c, db, [settings.wanInterface, settings.lanInterface], settings.spikeThresholdBps);
     // Run 2 polls: first establishes baseline, second computes rate
     await collector.pollOnce();
     await new Promise((r) => setTimeout(r, 2000));

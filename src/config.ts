@@ -12,6 +12,7 @@ export type Settings = {
   bindHost: string;
   bindPort: number;
   mockMode: boolean;
+  spikeThresholdBps: number;
 };
 
 type EnvSource = Record<string, string | undefined>;
@@ -56,5 +57,6 @@ export async function loadSettings(
     bindHost: env.BIND_HOST?.trim() || "0.0.0.0",
     bindPort: integer(env, "BIND_PORT", 8080),
     mockMode: (env.MOCK_MODE ?? "false").toLowerCase() === "true",
+    spikeThresholdBps: integer(env, "SPIKE_THRESHOLD_BPS", 1_000_000_000),
   };
 }

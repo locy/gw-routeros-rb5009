@@ -10,6 +10,7 @@ Deno.test("Collector writes samples after two polls", async () => {
     new MockRouterOSClient("ether1", "bridge"),
     db,
     ["ether1", "bridge"],
+    1000000000,
   );
 
   await collector.pollOnce();
@@ -30,6 +31,7 @@ Deno.test("Collector records connection failure", async () => {
     },
     db,
     ["ether1"],
+    1000000000,
   );
 
   await collector.pollOnce();

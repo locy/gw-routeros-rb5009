@@ -1,11 +1,9 @@
 import type { DatabaseWrapper, TrafficSample } from "./db.ts";
-import type { InterfaceCounters, LinkState } from "./models.ts";
+import type { InterfaceCounters } from "./models.ts";
 import type { RouterOSClient } from "./routeros.ts";
 import { calculateRate } from "./traffic.ts";
 import { pushLatestSample } from "./api.ts";
-
-// Traffic spike threshold: > 100 Mbps
-const SPIKE_THRESHOLD_BPS = 100_000_000;
+import type { Settings } from "./config.ts";
 
 // Poll delay warning: > 15 seconds between polls
 const POLL_DELAY_THRESHOLD = 15;
@@ -19,6 +17,7 @@ export class Collector {
     private readonly client: RouterOSClient,
     private readonly db: DatabaseWrapper,
     private readonly interfaces: string[],
+    private readonly spikeThresholdBps: number,
   ) {}
 
   async pollOnce(): Promise<void> {
@@ -76,14 +75,14 @@ export class Collector {
       pushLatestSample(sample as TrafficSample);
 
       // Detect traffic spikes
-      if (sample.rxBps > SPIKE_THRESHOLD_BPS) {
+      if (sample.rxBps > this.spikeThresholdBps) {
         this.db.insertEvent(
           "traffic_spike_down",
           iface,
           `${iface} download spike: ${(sample.rxBps / 1_000_000).toFixed(0)} Mbps`,
         );
       }
-      if (sample.txBps > SPIKE_THRESHOLD_BPS) {
+      if (sample.txBps > this.spikeThresholdBps) {
         this.db.insertEvent(
           "traffic_spike_up",
           iface,
