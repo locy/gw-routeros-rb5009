@@ -3,6 +3,7 @@
 
 var historyZoom = { start: 0, end: 1 };
 var _historyLoaded = false;
+var _historyRangeSeconds = 86400; // default 24h
 
 function fmtHistoryBps(b) {
   if (b >= 1000000000) return (b / 1000000000).toFixed(2) + " Gbps";
@@ -27,7 +28,7 @@ function updateHistoryStats(statsEl, maxRx, maxTx, startPt, endPt, dataLen, show
 
 async function loadHistory() {
   var iface = document.getElementById("history-iface").value;
-  var historyRangeVal = parseInt(document.getElementById("history-range").value);
+  _historyRangeSeconds = parseInt(document.getElementById("history-range").value);
   var canvas = document.getElementById("history-chart");
   if (!canvas) return;
 
@@ -45,7 +46,7 @@ async function loadHistory() {
   ctx.fillText("載入中…", width / 2, height / 2);
 
   try {
-    var resp = await fetch("/api/history/" + encodeURIComponent(iface) + "?range=" + range);
+    var resp = await fetch("/api/history/" + encodeURIComponent(iface) + "?range=" + _historyRangeSeconds);
     var data = await resp.json();
     if (!data || data.length < 2) {
       ctx.clearRect(0, 0, width, height);
@@ -70,13 +71,13 @@ async function loadHistory() {
     drawLineChart("history-chart", [
       { label: "下載", color: "#0ea5e9", key: "rxBps" },
       { label: "上傳", color: "#f59e0b", key: "txBps" },
-    ], data, { rangeSeconds: parseInt(historyRangeVal, 10) || 86400 });
+    ], data, { rangeSeconds: parseInt(_historyRangeSeconds, 10) || 86400 });
 
     // Setup click overlay for history chart
     setupClickOverlay("history-chart", [
       { label: "下載", color: "#0ea5e9", key: "rxBps" },
       { label: "上傳", color: "#f59e0b", key: "txBps" },
-    ], data, { rangeSeconds: parseInt(historyRangeVal, 10) || 86400 });
+    ], data, { rangeSeconds: parseInt(_historyRangeSeconds, 10) || 86400 });
 
     // Wheel zoom handler
     _setupHistoryZoom(canvas, data);
@@ -87,6 +88,8 @@ async function loadHistory() {
     ctx.font = "14px Inter, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("載入失敗: " + e.message, width / 2, height / 2);
+    // Log to debug console
+    if (window.__debugLog) window.__debugLog("error", "History load failed: " + e.message + " range=" + _historyRangeSeconds + " iface=" + iface);
   }
 }
 
@@ -102,7 +105,7 @@ function _setupHistoryZoom(canvas, fullData) {
   // Re-attach click handler after cloneNode
   newOverlay.onclick = function(e) {
     var rect2 = canvas.getBoundingClientRect();
-    showClickValues(canvas, e.clientX - rect2.left, { rangeSeconds: parseInt(historyRangeVal, 10) || 86400 });
+    showClickValues(canvas, e.clientX - rect2.left, { rangeSeconds: parseInt(_historyRangeSeconds, 10) || 86400 });
   };
 
   newOverlay.addEventListener("wheel", function(e) {
@@ -135,7 +138,7 @@ function _setupHistoryZoom(canvas, fullData) {
       drawLineChart("history-chart", [
         { label: "下載", color: "#0ea5e9", key: "rxBps" },
         { label: "上傳", color: "#f59e0b", key: "txBps" },
-      ], clippedData, { rangeSeconds: parseInt(historyRangeVal, 10) || 86400 });
+      ], clippedData, { rangeSeconds: parseInt(_historyRangeSeconds, 10) || 86400 });
 
       // Update stats with zoom info
       var maxRx2 = 0, maxTx2 = 0;
