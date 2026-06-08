@@ -83,44 +83,64 @@ function updateLiveDisplay() {
   var wanEl = document.getElementById("wan-now");
   var lanEl = document.getElementById("lan-now");
 
-  var wanArr = samples.get("ether1");
-  if (wanArr && wanArr.length > 0) {
-    var w = wanArr[wanArr.length - 1];
-    if (wanEl) {
-      wanEl.innerHTML = '<span style="color:' + colorForBps(w.rxBps) + '">' + formatBps(w.rxBps) + ' ↓</span>' +
-        ' / ' +
-        '<span style="color:' + colorForBps(w.txBps) + '">' + formatBps(w.txBps) + ' ↑</span>';
+  // Use dynamic interface keys from collected samples
+  var wanKey = wanKey || findInterfaceKey("wan");
+  var lanKey = lanKey || findInterfaceKey("lan");
+
+  if (wanKey) {
+    var wanArr = samples.get(wanKey);
+    if (wanArr && wanArr.length > 0) {
+      var w = wanArr[wanArr.length - 1];
+      if (wanEl) {
+        wanEl.innerHTML = '<span style="color:' + colorForBps(w.rxBps) + '">' + formatBps(w.rxBps) + ' ↓</span>' +
+          ' / ' +
+          '<span style="color:' + colorForBps(w.txBps) + '">' + formatBps(w.txBps) + ' ↑</span>';
+      }
     }
   }
 
-  var lanArr = samples.get("bridge");
-  if (lanArr && lanArr.length > 0) {
-    var l = lanArr[lanArr.length - 1];
-    if (lanEl) {
-      lanEl.innerHTML = '<span style="color:' + colorForBps(l.rxBps) + '">' + formatBps(l.rxBps) + ' ↓</span>' +
-        ' / ' +
-        '<span style="color:' + colorForBps(l.txBps) + '">' + formatBps(l.txBps) + ' ↑</span>';
+  if (lanKey) {
+    var lanArr = samples.get(lanKey);
+    if (lanArr && lanArr.length > 0) {
+      var l = lanArr[lanArr.length - 1];
+      if (lanEl) {
+        lanEl.innerHTML = '<span style="color:' + colorForBps(l.rxBps) + '">' + formatBps(l.rxBps) + ' ↓</span>' +
+          ' / ' +
+          '<span style="color:' + colorForBps(l.txBps) + '">' + formatBps(l.txBps) + ' ↑</span>';
+      }
     }
   }
+}
+
+var wanKey = null;
+var lanKey = null;
+function findInterfaceKey(role) {
+  if (role === "wan" && wanKey) return wanKey;
+  if (role === "lan" && lanKey) return lanKey;
+  var keys = Array.from(samples.keys());
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i].toLowerCase();
+    if (k.indexOf("wan") >= 0) { wanKey = wanKey || keys[i]; if (role === "wan") return keys[i]; }
+    if (k.indexOf("lan") >= 0) { lanKey = lanKey || keys[i]; if (role === "lan") return keys[i]; }
+  }
+  return null;
 }
 
 // ---- Canvas chart ----
 
 function drawCharts() {
-  var ether = samples.get("ether1");
-  console.log("[drawCharts] ether samples:", ether ? ether.length : "undefined");
-  if (ether && ether.length > 0) {
-    console.log("[drawCharts] first sample:", ether[0].timestamp, ether[0].rxBps);
-  }
+  var wanK = findInterfaceKey("wan");
+  var lanK = findInterfaceKey("lan");
+
   drawLineChart("live-chart", [
     { label: "WAN ↓", color: "#0ea5e9", key: "rxBps" },
     { label: "WAN ↑", color: "#f59e0b", key: "txBps" },
-  ], samples.get("ether1") || []);
+  ], samples.get(wanK) || []);
 
   drawLineChart("live-chart-lan", [
     { label: "LAN ↓", color: "#10b981", key: "rxBps" },
     { label: "LAN ↑", color: "#8b5cf6", key: "txBps" },
-  ], samples.get("bridge") || []);
+  ], samples.get(lanK) || []);
 }
 
 function drawLineChart(canvasId, series, data) {
