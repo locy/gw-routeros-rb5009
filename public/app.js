@@ -51,6 +51,12 @@ async function fetchEvents() {
       ul.innerHTML = '<li style="color:#718096">無事件</li>';
       return;
     }
+    // Filter out old stale bridge missing_interface events
+    const isStale = data.every(e => e.type === 'missing_interface' && e.interface === 'bridge');
+    if (isStale) {
+      ul.innerHTML = '<li style="color:#718096">介面已更新為 bridge-WAN / bridge-LAN，舊的 bridge 事件已過時</li>';
+      return;
+    }
     let html = "";
     for (const e of data) {
       const ts = e.timestamp ? e.timestamp.slice(11, 16) : "??:??";
