@@ -65,20 +65,20 @@ window.drawCharts = function() {
   drawLineChart("live-chart", [
     { label: "WAN ↓", color: "#0ea5e9", key: "rxBps" },
     { label: "WAN ↑", color: "#f59e0b", key: "txBps" },
-  ], wanData);
+  ], wanData, {});
   setupClickOverlay("live-chart", [
     { label: "WAN ↓", color: "#0ea5e9", key: "rxBps" },
     { label: "WAN ↑", color: "#f59e0b", key: "txBps" },
-  ], wanData);
+  ], wanData, {});
 
   drawLineChart("live-chart-lan", [
     { label: "LAN ↓", color: "#10b981", key: "rxBps" },
     { label: "LAN ↑", color: "#8b5cf6", key: "txBps" },
-  ], lanData);
+  ], lanData, {});
   setupClickOverlay("live-chart-lan", [
     { label: "LAN ↓", color: "#10b981", key: "rxBps" },
     { label: "LAN ↑", color: "#8b5cf6", key: "txBps" },
-  ], lanData);
+  ], lanData, {});
 }
 
 // ---- WebSocket connection ----
@@ -135,7 +135,7 @@ window.connectWS = function() {
 // ---- Click overlay to show point values ----
 // Shared between live and history: click on chart overlay shows crosshair + tooltip
 
-function showClickValues(canvas, mouseX) {
+function showClickValues(canvas, mouseX, opts) {
   var series = canvas.__clickSeries;
   var data = canvas.__clickData;
   if (!data || data.length < 2 || !series) return;
@@ -270,8 +270,8 @@ function showClickValues(canvas, mouseX) {
     ctx.fillText(series[si3].label + ": " + formatBps(Math.abs(v2)), tooltipX + 6, tooltipY + 4 + si3 * 22);
   }
   var t = data[idx].timestamp;
-  var timeStr = "";
-  if (t) {
+  var timeStr = formatTime(t, opts && opts.rangeSeconds);
+  if (!timeStr || timeStr === "??:??" || timeStr === "") {
     try {
       if (typeof t === "string") timeStr = new Date(t).toLocaleTimeString("zh-TW", { hour12: false });
       else if (t instanceof Date) timeStr = t.toLocaleTimeString("zh-TW", { hour12: false });
@@ -285,7 +285,7 @@ function showClickValues(canvas, mouseX) {
   canvas.__clickOverlay._shownIdx = idx;
 }
 
-function setupClickOverlay(canvasId, series, data) {
+function setupClickOverlay(canvasId, series, data, opts) {
   var canvas = document.getElementById(canvasId);
   if (!canvas) return;
 
@@ -345,7 +345,7 @@ function setupClickOverlay(canvasId, series, data) {
 
   canvas.__clickOverlay.onclick = function(e) {
     var rect2 = canvas.getBoundingClientRect();
-    showClickValues(canvas, e.clientX - rect2.left);
+    showClickValues(canvas, e.clientX - rect2.left, opts);
   };
 }
 

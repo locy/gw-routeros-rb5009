@@ -22,18 +22,36 @@ function formatBps(value) {
   return (abs / 1000000).toFixed(2) + " Mb";
 }
 
-function formatTime(dateStr) {
+function formatTime(dateStr, rangeSeconds) {
   var d = new Date(dateStr);
   if (isNaN(d.getTime())) return "??:??";
   var hh = d.getHours().toString().padStart(2, "0");
   var mm = d.getMinutes().toString().padStart(2, "0");
-  return hh + ":" + mm;
+  var timeStr = hh + ":" + mm;
+  // Show date based on range
+  if (rangeSeconds) {
+    if (rangeSeconds <= 1800) { // ≤ 30min: no date needed
+      return timeStr;
+    } else if (rangeSeconds <= 86400) { // ≤ 24h: show HH:MM only
+      return timeStr;
+    } else if (rangeSeconds <= 7 * 86400) { // ≤ 7d: show MM-DD
+      var mon = (d.getMonth() + 1).toString().padStart(2, "0");
+      var day = d.getDate().toString().padStart(2, "0");
+      return mon + "/" + day + " " + timeStr;
+    } else { // > 7d: show YYYY-MM-DD
+      var year = d.getFullYear();
+      var mon = (d.getMonth() + 1).toString().padStart(2, "0");
+      var day = d.getDate().toString().padStart(2, "0");
+      return year + "/" + mon + "/" + day + " " + timeStr;
+    }
+  }
+  return timeStr;
 }
 
 // ---- Canvas chart rendering ----
 // Shared between live-chart.js and history-chart.js
 
-function drawLineChart(canvasId, series, data) {
+function drawLineChart(canvasId, series, data, opts) {
   var canvas = document.getElementById(canvasId);
   if (!canvas) return;
 
@@ -130,7 +148,7 @@ function drawLineChart(canvasId, series, data) {
   var step = Math.max(1, Math.floor(data.length / 8));
   for (var xi = 0; xi < data.length; xi += step) {
     var xPos = pad.left + (xi / (data.length - 1)) * chartW;
-    ctx.fillText(formatTime(data[xi].timestamp), xPos, height - 12);
+    ctx.fillText(formatTime(data[xi].timestamp, opts && opts.rangeSeconds), xPos, height - 12);
   }
 
   // ---- Draw lines ----

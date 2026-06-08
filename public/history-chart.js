@@ -70,13 +70,13 @@ async function loadHistory() {
     drawLineChart("history-chart", [
       { label: "下載", color: "#0ea5e9", key: "rxBps" },
       { label: "上傳", color: "#f59e0b", key: "txBps" },
-    ], data);
+    ], data, { rangeSeconds: parseInt(historyRangeVal, 10) || 86400 });
 
     // Setup click overlay for history chart
     setupClickOverlay("history-chart", [
       { label: "下載", color: "#0ea5e9", key: "rxBps" },
       { label: "上傳", color: "#f59e0b", key: "txBps" },
-    ], data);
+    ], data, { rangeSeconds: parseInt(historyRangeVal, 10) || 86400 });
 
     // Wheel zoom handler
     _setupHistoryZoom(canvas, data);
@@ -102,7 +102,7 @@ function _setupHistoryZoom(canvas, fullData) {
   // Re-attach click handler after cloneNode
   newOverlay.onclick = function(e) {
     var rect2 = canvas.getBoundingClientRect();
-    showClickValues(canvas, e.clientX - rect2.left);
+    showClickValues(canvas, e.clientX - rect2.left, { rangeSeconds: parseInt(historyRangeVal, 10) || 86400 });
   };
 
   newOverlay.addEventListener("wheel", function(e) {
@@ -135,7 +135,7 @@ function _setupHistoryZoom(canvas, fullData) {
       drawLineChart("history-chart", [
         { label: "下載", color: "#0ea5e9", key: "rxBps" },
         { label: "上傳", color: "#f59e0b", key: "txBps" },
-      ], clippedData);
+      ], clippedData, { rangeSeconds: parseInt(historyRangeVal, 10) || 86400 });
 
       // Update stats with zoom info
       var maxRx2 = 0, maxTx2 = 0;
