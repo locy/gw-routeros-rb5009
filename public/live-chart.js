@@ -270,8 +270,17 @@ function showClickValues(canvas, mouseX) {
     ctx.fillText(series[si3].label + ": " + formatBps(Math.abs(v2)), tooltipX + 6, tooltipY + 4 + si3 * 22);
   }
   var t = data[idx].timestamp;
+  var timeStr = "";
+  if (t) {
+    try {
+      if (typeof t === "string") timeStr = new Date(t).toLocaleTimeString("zh-TW", { hour12: false });
+      else if (t instanceof Date) timeStr = t.toLocaleTimeString("zh-TW", { hour12: false });
+      else if (t && t.toTimeString) timeStr = t.toTimeString().slice(0, 8);
+      else timeStr = String(t);
+    } catch(e) { timeStr = String(t); }
+  }
   ctx.fillStyle = "#718096";
-  ctx.fillText(t ? t.toTimeString().slice(0, 8) : "", tooltipX + 6, tooltipY + (series.length + 1) * 22 - 18);
+  ctx.fillText(timeStr, tooltipX + 6, tooltipY + (series.length + 1) * 22 - 18);
 
   canvas.__clickOverlay._shownIdx = idx;
 }
