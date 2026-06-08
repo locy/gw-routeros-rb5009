@@ -1,6 +1,17 @@
 const samples = new Map();
 const MAX_CHART_POINTS = 120;
 
+// ---- Connection status indicator (top-right) ----
+
+function setConnectionStatus(color, text) {
+  var indicator = document.getElementById("status-indicator");
+  if (!indicator) return;
+  var led = indicator.querySelector(".led");
+  var label = indicator.querySelector(".status-text");
+  led.className = "led " + color;
+  label.textContent = text;
+}
+
 function mbps(value) {
   const abs = Math.abs(value);
   if (abs < 1_000) return abs.toFixed(0) + " bps";
@@ -15,8 +26,7 @@ function connectWS() {
   const ws = new WebSocket(proto + "//" + location.host + "/ws");
 
   ws.onopen = function () {
-    const el = document.querySelector("#stale-state");
-    if (el) el.textContent = "即時連線已就緒";
+    setConnectionStatus("green", "即時連線已就緒");
   };
 
   ws.onmessage = function (ev) {
@@ -39,8 +49,7 @@ function connectWS() {
   };
 
   ws.onclose = function () {
-    var el = document.querySelector("#stale-state");
-    if (el) el.textContent = "連線中斷，3 秒後重連…";
+    setConnectionStatus("yellow", "連線中斷，3 秒後重連…");
     setTimeout(connectWS, 3000);
   };
 }

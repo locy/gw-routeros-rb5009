@@ -17,6 +17,10 @@
           <button>Live</button>
           <button>History</button>
         </nav>
+        <div class="status-indicator" id="status-indicator">
+          <span class="led"></span>
+          <span class="status-text">尚未連線</span>
+        </div>
       </header>
       <section class="dashboard-grid">
         <section class="metric-card">
@@ -25,9 +29,7 @@
         <section class="metric-card">
           <span>LAN 即時</span><strong id="lan-now">等待資料</strong>
         </section>
-        <section class="metric-card">
-          <span>連線狀態</span><strong id="stale-state">尚未連線</strong>
-        </section>
+
         <section class="panel chart-panel">
           <h2>WAN 即時流量</h2><canvas
             id="live-chart"

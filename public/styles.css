@@ -26,6 +26,59 @@ button {
   margin-bottom: 20px;
 }
 
+.topbar > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topbar > nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: #5f6b7a;
+  white-space: nowrap;
+}
+
+.status-indicator .led {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #9ca3af;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+
+.status-indicator .led.green {
+  background: #10b981;
+  box-shadow: 0 0 6px #10b98166;
+}
+
+.status-indicator .led.yellow {
+  background: #f59e0b;
+  box-shadow: 0 0 6px #f59e0b66;
+}
+
+.status-indicator .led.red {
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef444466;
+}
+
+.status-indicator .status-text {
+  font-weight: 500;
+}
+
 .topbar h1 {
   font-size: 24px;
   margin: 0;
