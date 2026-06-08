@@ -1,7 +1,9 @@
-const samples = new Map();
-const MAX_CHART_POINTS = 120;
+// ---- State ----
 
-// ---- Connection status indicator (top-right) ----
+var samples = new Map();
+var MAX_CHART_POINTS = 120;
+
+// ---- Connection status indicator ----
 
 function setConnectionStatus(color, text) {
   var indicator = document.getElementById("status-indicator");
@@ -12,18 +14,27 @@ function setConnectionStatus(color, text) {
   label.textContent = text;
 }
 
+// ---- Color helpers ----
+
 function mbps(value) {
-  const abs = Math.abs(value);
+  var abs = Math.abs(value);
   if (abs < 1_000) return abs.toFixed(0) + " bps";
   if (abs < 1_000_000) return (abs / 1_000).toFixed(0) + " Kbps";
   return (abs / 1_000_000).toFixed(2) + " Mbps";
 }
 
+function colorForBps(bps) {
+  if (bps === 0) return "#374151";
+  if (bps < 1_000_000) return "#a5f3fc";
+  if (bps < 10_000_000) return "#7dd3fc";
+  return "#60a5fa";
+}
+
 // ---- WebSocket connection ----
 
 function connectWS() {
-  const proto = location.protocol === "https:" ? "wss:" : "ws:";
-  const ws = new WebSocket(proto + "//" + location.host + "/ws");
+  var proto = location.protocol === "https:" ? "wss:" : "ws:";
+  var ws = new WebSocket(proto + "//" + location.host + "/ws");
 
   ws.onopen = function () {
     setConnectionStatus("green", "即時連線已就緒");
@@ -54,50 +65,22 @@ function connectWS() {
   };
 }
 
-// ---- Live display update ----
+// ---- Live display update (from WS only) ----
 
 function updateLiveDisplay() {
   samples.forEach(function (arr, iface) {
     if (arr.length === 0) return;
     var last = arr[arr.length - 1];
     var elId = iface === "ether1" ? "wan-now" : "lan-now";
-    var el = document.querySelector("#" + elId);
-    if (el) {
-      el.textContent = mbps(last.rxBps) + " ↓ / ↑ " + mbps(last.txBps);
-    }
+    var el = document.getElementById(elId);
+    if (!el) return;
+
+    var rx = last.rxBps || 0;
+    var tx = last.txBps || 0;
+    el.innerHTML = '<span style="color:' + colorForBps(rx) + '">' + mbps(rx) + ' ↓</span>' +
+      ' / ' +
+      '<span style="color:' + colorForBps(tx) + '">' + mbps(tx) + ' ↑</span>';
   });
-}
-
-// ---- Polling for initial status + top devices ----
-
-async function refreshStatus() {
-  try {
-    var res = await fetch("/api/status");
-    var body = await res.json();
-    var names = Object.keys(body.interfaces);
-    var wan = body.interfaces[names[0]];
-    var lan = body.interfaces[names[1]];
-    var wanEl = document.querySelector("#wan-now");
-    var lanEl = document.querySelector("#lan-now");
-    if (wanEl && wan) {
-      wanEl.textContent = mbps(wan.rxBps) + " ↓ / ↑ " + mbps(wan.txBps);
-    } else if (wanEl) {
-      wanEl.textContent = "等待資料";
-    }
-    if (lanEl && lan) {
-      lanEl.textContent = mbps(lan.rxBps) + " ↓ / ↑ " + mbps(lan.txBps);
-    } else if (lanEl) {
-      lanEl.textContent = "等待資料";
-    }
-    var tdEl = document.querySelector("#top-devices");
-    if (tdEl) {
-      tdEl.textContent = body.topDevices.available
-        ? "已啟用"
-        : body.topDevices.reason;
-    }
-  } catch (e) {
-    // ignore
-  }
 }
 
 // ---- Canvas chart ----
@@ -123,6 +106,7 @@ function drawLineChart(canvasId, series, data) {
 
   var dpr = window.devicePixelRatio || 1;
   var rect = canvas.getBoundingClientRect();
+  console.log("[draw] " + canvasId + " rect:", rect.width, rect.height);
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
   ctx.scale(dpr, dpr);
@@ -132,14 +116,14 @@ function drawLineChart(canvasId, series, data) {
   ctx.clearRect(0, 0, W, H);
 
   if (data.length < 2) {
-    ctx.fillStyle = "#9ca3af";
+    ctx.fillStyle = "#4b5563";
     ctx.font = "14px Inter, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("累積至少 2 筆資料後繪製圖表", W / 2, H / 2);
     return;
   }
 
-  var pad = { top: 24, right: 16, bottom: 28, left: 64 };
+  var pad = { top: 24, right: 16, bottom: 28, left: 68 };
   var cW = W - pad.left - pad.right;
   var cH = H - pad.top - pad.bottom;
 
@@ -155,7 +139,7 @@ function drawLineChart(canvasId, series, data) {
   globalMax = exp;
 
   // Grid
-  ctx.strokeStyle = "#e5e7eb";
+  ctx.strokeStyle = "#2d3748";
   ctx.lineWidth = 1;
   ctx.setLineDash([4, 4]);
   for (var g = 0; g <= 4; g++) {
@@ -166,7 +150,7 @@ function drawLineChart(canvasId, series, data) {
     ctx.stroke();
 
     var val = globalMax - (globalMax / 4) * g;
-    ctx.fillStyle = "#6b7280";
+    ctx.fillStyle = "#9ca3af";
     ctx.font = "11px Inter, sans-serif";
     ctx.textAlign = "right";
     ctx.fillText(mbps(val), pad.left - 6, y + 4);
@@ -174,7 +158,7 @@ function drawLineChart(canvasId, series, data) {
   ctx.setLineDash([]);
 
   // X labels
-  ctx.fillStyle = "#6b7280";
+  ctx.fillStyle = "#9ca3af";
   ctx.font = "11px Inter, sans-serif";
   ctx.textAlign = "center";
   var step = Math.max(1, Math.floor(data.length / 6));
@@ -222,42 +206,13 @@ function drawLineChart(canvasId, series, data) {
   for (var ls = 0; ls < series.length; ls++) {
     ctx.fillStyle = series[ls].color;
     ctx.fillRect(legendX, 4, 12, 12);
-    ctx.fillStyle = "#374151";
+    ctx.fillStyle = "#d1d5db";
     ctx.textAlign = "left";
     ctx.fillText(series[ls].label, legendX + 16, 14);
     legendX += ctx.measureText(series[ls].label).width + 32;
   }
 }
 
-// ---- Events ----
-
-async function refreshEvents() {
-  try {
-    var res = await fetch("/api/events");
-    var events = await res.json();
-    var list = document.querySelector("#events");
-    if (!list) return;
-    list.innerHTML = "";
-    for (var ei = 0; ei < Math.min(10, events.length); ei++) {
-      var e = events[ei];
-      var li = document.createElement("li");
-      li.style.cssText = "padding:4px 0;font-size:13px;color:#374151;border-bottom:1px solid #f3f4f6;";
-      var t = new Date(e.timestamp);
-      var text = "[" + t.toLocaleString() + "] " + e.type;
-      if (e.interface) text += " (" + e.interface + ")";
-      text += " " + e.message;
-      li.textContent = text;
-      list.appendChild(li);
-    }
-  } catch (e) {
-    // ignore
-  }
-}
-
 // ---- Init ----
 
 connectWS();
-refreshStatus();
-refreshEvents();
-setInterval(refreshStatus, 5000);
-setInterval(refreshEvents, 10000);
