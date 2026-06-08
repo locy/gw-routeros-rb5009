@@ -387,38 +387,8 @@ function drawLineChart(canvasId, series, data) {
     legendX += ctx.measureText(leg.label).width + 36;
   }
 
-  // ---- Hover interaction ----
-  // Store data for hover (use existing hover div if already created)
-  if (canvas.__hoverDiv) {
-    // Update stored data for live charts that redraw
-    canvas.__data = data;
-    canvas.__series = series;
-  } else {
-    var hoverDiv = document.createElement("div");
-    hoverDiv.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;pointer-events:none;z-index:10";
-    canvas.style.position = "relative";
-    canvas.parentElement.insertBefore(hoverDiv, canvas.nextSibling);
-    hoverDiv.id = canvasId + "-hover";
-    canvas.__hoverDiv = hoverDiv;
-    canvas.__data = data;
-    canvas.__series = series;
-    canvas.__chartParams = canvas.__chartParams;
-    canvas.__parentEl = canvas.parentElement;
-
-    hoverDiv.addEventListener("mousemove", function(e) {
-      var r = canvas.getBoundingClientRect();
-      drawHover(canvas, e.clientX - r.left);
-    });
-    hoverDiv.addEventListener("mouseleave", function() {
-      // Redraw chart body to clear hover overlay
-      var p2 = canvas.__chartParams;
-      if (p2 && p2.pad) {
-        redrawCanvas(canvas);
-        drawChartBody(canvas, canvas.__series, canvas.__data, p2);
-      }
-      hoverDiv.innerHTML = "";
-    });
-  }
+  // ---- Legend (already drawn) ----
+  // Done.
 }
 
 function redrawCanvas(canvas) {
