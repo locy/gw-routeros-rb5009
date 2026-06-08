@@ -388,16 +388,22 @@ function drawLineChart(canvasId, series, data) {
   }
 
   // ---- Hover interaction ----
-  if (!canvas.__hoverDiv) {
+  // Store data for hover (use existing hover div if already created)
+  if (canvas.__hoverDiv) {
+    // Update stored data for live charts that redraw
+    canvas.__data = data;
+    canvas.__series = series;
+  } else {
     var hoverDiv = document.createElement("div");
-    hoverDiv.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;z-index:5";
-    canvas.parentElement.style.position = "relative";
+    hoverDiv.style.cssText = "position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;pointer-events:none;z-index:10";
+    canvas.style.position = "relative";
     canvas.parentElement.insertBefore(hoverDiv, canvas.nextSibling);
     hoverDiv.id = canvasId + "-hover";
     canvas.__hoverDiv = hoverDiv;
     canvas.__data = data;
     canvas.__series = series;
     canvas.__chartParams = canvas.__chartParams;
+    canvas.__parentEl = canvas.parentElement;
 
     hoverDiv.addEventListener("mousemove", function(e) {
       var r = canvas.getBoundingClientRect();
@@ -405,8 +411,11 @@ function drawLineChart(canvasId, series, data) {
     });
     hoverDiv.addEventListener("mouseleave", function() {
       // Redraw chart body to clear hover overlay
-      redrawCanvas(canvas);
-      drawChartBody(canvas, series, data, p);
+      var p2 = canvas.__chartParams;
+      if (p2 && p2.pad) {
+        redrawCanvas(canvas);
+        drawChartBody(canvas, canvas.__series, canvas.__data, p2);
+      }
       hoverDiv.innerHTML = "";
     });
   }
@@ -426,7 +435,9 @@ function drawHover(canvas, mouseX) {
   if (!data || !series || !p || !p.pad) return;
 
   // Find nearest data point
-  var xRatio = (mouseX - p.pad.left) / p.chartW;
+  var chartW2 = canvas.width / (window.devicePixelRatio || 1) - p.pad.left - p.pad.right;
+  var chartH2 = canvas.height / (window.devicePixelRatio || 1) - p.pad.top - p.pad.bottom;
+  var xRatio = (mouseX - p.pad.left) / chartW2;
   var idx = Math.round(xRatio * (data.length - 1));
   idx = Math.max(0, Math.min(data.length - 1, idx));
 
@@ -435,7 +446,7 @@ function drawHover(canvas, mouseX) {
   // Redraw full chart to restore lines/grid
   drawChartBody(canvas, series, data, p);
 
-  var pointX = p.pad.left + (idx / (data.length - 1)) * p.chartW;
+  var pointX = p.pad.left + (idx / (data.length - 1)) * chartW2;
 
   // Vertical crosshair
   ctx.strokeStyle = "#4a5568";
@@ -443,15 +454,15 @@ function drawHover(canvas, mouseX) {
   ctx.setLineDash([3, 3]);
   ctx.beginPath();
   ctx.moveTo(pointX, p.pad.top);
-  ctx.lineTo(pointX, p.pad.top + p.chartH);
+  ctx.lineTo(pointX, p.pad.top + chartH2);
   ctx.stroke();
   ctx.setLineDash([]);
 
   // Dots on each series at this point
   for (var si = 0; si < series.length; si++) {
     var v = Number(data[idx][series[si].key]) || 0;
-    var y = p.pad.top + p.chartH - ((v - p.yMin) / p.chartRange) * p.chartH;
-    y = Math.max(p.pad.top, Math.min(p.pad.top + p.chartH, y));
+    var y = p.pad.top + chartH2 - ((v - p.yMin) / p.chartRange) * chartH2;
+    y = Math.max(p.pad.top, Math.min(p.pad.top + chartH2, y));
     ctx.fillStyle = series[si].color;
     ctx.beginPath();
     ctx.arc(pointX, y, 5, 0, Math.PI * 2);
@@ -483,16 +494,21 @@ function drawHover(canvas, mouseX) {
 
 function drawChartBody(canvas, series, data, p) {
   var ctx = canvas.getContext("2d");
+  if (!p || !p.pad) return;
   var width = canvas.width / (window.devicePixelRatio || 1);
   var height = canvas.height / (window.devicePixelRatio || 1);
-  var dpr = window.devicePixelRatio || 1;
+
+  // Recalculate chart dimensions in case of resize
+  var chartW = width - p.pad.left - p.pad.right;
+  var chartH = height - p.pad.top - p.pad.bottom;
+  if (chartW <= 0 || chartH <= 0) return;
 
   // Grid lines
   ctx.strokeStyle = "#2d3748";
   ctx.lineWidth = 1;
   ctx.setLineDash([4, 4]);
   for (var g = 0; g <= 4; g++) {
-    var gy = p.pad.top + (p.chartH / 4) * g;
+    var gy = p.pad.top + (chartH / 4) * g;
     ctx.beginPath();
     ctx.moveTo(p.pad.left, gy);
     ctx.lineTo(width - p.pad.right, gy);
@@ -513,7 +529,7 @@ function drawChartBody(canvas, series, data, p) {
   ctx.textBaseline = "top";
   var step = Math.max(1, Math.floor(data.length / 8));
   for (var xi = 0; xi < data.length; xi += step) {
-    var xPos = p.pad.left + (xi / (data.length - 1)) * p.chartW;
+    var xPos = p.pad.left + (xi / (data.length - 1)) * chartW;
     ctx.fillText(formatTime(data[xi].timestamp), xPos, height - 12);
   }
 
@@ -528,9 +544,9 @@ function drawChartBody(canvas, series, data, p) {
     for (var li = 0; li < data.length; li++) {
       var v = Number(data[li][s.key]) || 0;
       var av = Math.abs(v);
-      var x = p.pad.left + (li / (data.length - 1)) * p.chartW;
-      var y = p.pad.top + p.chartH - ((av - p.yMin) / p.chartRange) * p.chartH;
-      y = Math.max(p.pad.top, Math.min(p.pad.top + p.chartH, y));
+      var x = p.pad.left + (li / (data.length - 1)) * chartW;
+      var y = p.pad.top + chartH - ((av - p.yMin) / p.chartRange) * chartH;
+      y = Math.max(p.pad.top, Math.min(p.pad.top + chartH, y));
       if (li === 0) { ctx.moveTo(x, y); } else { ctx.lineTo(x, y); }
     }
     ctx.stroke();
