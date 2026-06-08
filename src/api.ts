@@ -185,6 +185,56 @@ export function createHandler(
       delete (globalThis as Record<string, unknown>).__debugHistory;
       return json({ ok: true });
     }
+    if (url.pathname === "/api/debug/ai-report") {
+      // Generate AI-ready report combining browser + server state
+      const browserSnap = (globalThis as Record<string, unknown>).__debugState;
+      const recentWan = db.getRecentSamples(wanInterface, 5);
+      const recentLan = db.getRecentSamples(lanInterface, 5);
+      const events = db.getRecentEvents(10);
+      let report = "";
+      report += "=== RB5009 Traffic Monitor - AI Debug Report ===\n";
+      report += "Time: " + new Date().toISOString() + "\n\n";
+      report += "--- Browser State ---\n";
+      if (browserSnap && typeof browserSnap === "object") {
+        report += JSON.stringify(browserSnap, null, 2).slice(0, 4000) + "\n";
+      } else {
+        report += "(no browser snapshot received)\n";
+      }
+      report += "\n--- Server Samples (WAN " + wanInterface + ") ---\n";
+      if (recentWan.length) {
+        recentWan.forEach(s => {
+          report += `  ${s.timestamp} rx=${s.rxBytes} tx=${s.txBytes} rxBps=${s.rxBps} txBps=${s.txBps}\n`;
+        });
+      } else {
+        report += "  (no samples)\n";
+      }
+      report += "\n--- Server Samples (LAN " + lanInterface + ") ---\n";
+      if (recentLan.length) {
+        recentLan.forEach(s => {
+          report += `  ${s.timestamp} rx=${s.rxBytes} tx=${s.txBytes} rxBps=${s.rxBps} txBps=${s.txBps}\n`;
+        });
+      } else {
+        report += "  (no samples)\n";
+      }
+      report += "\n--- Recent Events ---\n";
+      if (events.length) {
+        events.forEach(e => {
+          report += `  [${e.type}] ${e.message} (${e.timestamp})\n`;
+        });
+      } else {
+        report += "  (no events)\n";
+      }
+      report += "\n--- Client Count ---\n";
+      // Access BroadcastHub via global
+      const hub = (globalThis as Record<string, unknown>).__broadcastHub;
+      if (hub && typeof hub === "object" && "count" in hub) {
+        report += "WS clients connected: " + (hub as any).count + "\n";
+      } else {
+        report += "WS broadcast hub not available\n";
+      }
+      report += "\n=== End Report ===";
+      return new Response(report, { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+    }
     return serveDir(request, { fsRoot: publicDir, urlRoot: "" });
   };
 }

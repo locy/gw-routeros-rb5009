@@ -105,6 +105,7 @@ if (command === "routeros-script") {
     wss.on("connection", (ws, req) => {
       console.log(`[WS] client connected from ${req.socket?.remoteAddress || "unknown"}`);
       wsHub.add(ws);
+(globalThis as Record<string, unknown>).__broadcastHub = wsHub;
       ws.on("close", () => {
         console.log(`[WS] client disconnected`);
         wsHub.remove(ws);

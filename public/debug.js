@@ -33,6 +33,7 @@
           </select>
           <button id="debug-collect">📸 Collect</button>
           <button id="debug-send">📡 Send</button>
+          <button id="debug-ai-report">🤖 AI Report</button>
           <button id="debug-clear">Clear</button>
           <button id="debug-toggle">▼</button>
         </div>
@@ -72,6 +73,27 @@
           addLog("error", "Send failed: " + err.message);
         });
       }
+    });
+    var dbgAiReport = document.getElementById("debug-ai-report");
+    if (dbgAiReport) dbgAiReport.addEventListener("click", function() {
+      addLog("info", "Fetching AI debug report from server...");
+      fetch("/api/debug/ai-report")
+        .then(function(r) { return r.text(); })
+        .then(function(report) {
+          // Copy to clipboard
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(report).then(function() {
+              addLog("info", "AI report generated and copied to clipboard (" + report.length + " chars)");
+            }).catch(function() {
+              addLog("info", "AI report generated (" + report.length + " chars). Select and copy manually.");
+            });
+          } else {
+            addLog("info", "AI report generated (" + report.length + " chars). Select and copy manually.");
+          }
+        })
+        .catch(function(err) {
+          addLog("error", "AI report failed: " + err.message);
+        });
     });
     var dbgToggle = document.getElementById("debug-toggle");
     if (dbgToggle) dbgToggle.addEventListener("click", function() {
