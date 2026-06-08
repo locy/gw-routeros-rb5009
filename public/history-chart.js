@@ -27,7 +27,7 @@ function updateHistoryStats(statsEl, maxRx, maxTx, startPt, endPt, dataLen, show
 
 async function loadHistory() {
   var iface = document.getElementById("history-iface").value;
-  var range = parseInt(document.getElementById("history-range").value);
+  var historyRangeVal = parseInt(document.getElementById("history-range").value);
   var canvas = document.getElementById("history-chart");
   if (!canvas) return;
 
